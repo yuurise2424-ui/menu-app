@@ -10,17 +10,17 @@
         /* 全画面表示のベース設定 */
         html, body {
             height: 100%;
-            background: #000; /* ブラウザのデフォルト背景として黒を設定 */
+            background: #000;
             font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
-            overflow: hidden; /* 全体のスクロールを禁止 */
+            overflow: hidden;
         }
 
         /* アプリのメインコンテナ */
         #app {
-            height: 100dvh; /* スマホブラウザのアドレスバーを考慮した高さ */
+            height: 100dvh;
             display: flex;
             flex-direction: column;
-            background: rgba(20, 20, 20, 0.85); /* 透明度スライダーの対象 */
+            background: rgba(20, 20, 20, 0.85);
             color: #eee;
             width: 100%;
         }
@@ -89,6 +89,9 @@
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: #888; margin-bottom: 4px; }
         .field-value { color: #ddd; line-height: 1.5; }
+        
+        /* 注意点やアレルギーなどの警告テキスト */
+        .field-value.alert-text { color: #ff6b6b; font-weight: bold; }
 
         /* フッター部（透明度スライダー） */
         .footer {
@@ -120,7 +123,6 @@
     <div class="header">
         <button class="back-btn" id="back-btn" onclick="renderCats()">‹</button>
         <div class="header-title" id="header-title">読み込み中...</div>
-        <!-- レイアウト調整用のダミー要素（タイトルを中央に保つため） -->
         <div style="width: 40px; display: none;" id="header-spacer"></div>
     </div>
 
@@ -142,7 +144,7 @@
     const SHEET_ID = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 
-    let data = [];
+    let data = []; // [{cat, name, price, amount, fat, parts, desc, note, allergy}]
 
     // 透明度設定
     function setOpacity(val) {
@@ -158,17 +160,20 @@
             const rows = parseCSV(text);
 
             let lastCat = '';
+            // 新しいスプレッドシートの列の順番に合わせたマッピング
             data = rows.slice(1)
                 .map(r => {
                     if (r[0]) lastCat = r[0];
                     return {
-                        cat:    lastCat,
-                        name:   r[1] || '',
-                        price:  r[2] || '',
-                        amount: r[3] || '',
-                        parts:  r[4] || '',
-                        desc:   r[5] || '',
-                        note:   r[6] || '',
+                        cat:     lastCat,
+                        name:    r[1] || '',
+                        price:   r[2] || '',
+                        amount:  r[3] || '',
+                        fat:     r[4] || '', // 追加：肉の脂の量
+                        parts:   r[5] || '', // 変更：材料or部位
+                        desc:    r[6] || '', // 変更：商品説明
+                        note:    r[7] || '', // 変更：注意点
+                        allergy: r[8] || '', // 追加：アレルギー
                     };
                 })
                 .filter(r => r.name);
@@ -243,11 +248,14 @@
         const listEl = document.getElementById('item-list');
 
         listEl.innerHTML = items.map((item) => {
+            // 表示する項目を定義（値がないものはフィルターで除外）
             const details = [
-                { label: '枚数/グラム', val: item.amount },
-                { label: '材料/部位', val: item.parts },
-                { label: '説明', val: item.desc },
-                { label: '注意点', val: item.note }
+                { label: '枚数/グラム', val: item.amount, isAlert: false },
+                { label: '脂の量', val: item.fat, isAlert: false },
+                { label: '材料/部位', val: item.parts, isAlert: false },
+                { label: '説明', val: item.desc, isAlert: false },
+                { label: '注意点', val: item.note, isAlert: true },   // 赤字にするフラグ
+                { label: 'アレルギー', val: item.allergy, isAlert: true } // 赤字にするフラグ
             ].filter(d => d.val);
 
             let detailsHtml = '';
@@ -256,7 +264,7 @@
                     details.map(d => `
                         <div class="field">
                             <div class="field-label">${esc(d.label)}</div>
-                            <div class="field-value">${esc(d.val)}</div>
+                            <div class="field-value ${d.isAlert ? 'alert-text' : ''}">${esc(d.val)}</div>
                         </div>
                     `).join('') + 
                 `</div>`;
@@ -276,6 +284,7 @@
         listEl.scrollTop = 0;
     }
 
+    // HTMLエスケープ処理
     function esc(s) {
         return String(s ?? '')
             .replace(/&/g,'&amp;').replace(/</g,'&lt;')
