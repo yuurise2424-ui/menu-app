@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>メニュー案内</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            background: #111;
+            color: #eee;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* カテゴリ */
+        .categories {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 8px;
+            gap: 6px;
+            background: #1a1a1a;
+            flex-shrink: 0;
+            scrollbar-width: none;
+        }
+        .categories::-webkit-scrollbar { display: none; }
+
+        .cat-btn {
+            background: #2a2a2a;
+            color: #ccc;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            white-space: nowrap;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .cat-btn.active {
+            background: #c0392b;
+            color: #fff;
+        }
+
+        /* 商品リスト */
+        .items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .item-card {
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 7px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .item-card:active { background: #2a2a2a; }
+
+        .item-name { font-size: 15px; }
+        .item-sub { font-size: 12px; color: #777; margin-top: 3px; }
+        .item-price { font-size: 14px; color: #f5a623; white-space: nowrap; flex-shrink: 0; }
+
+        /* モーダル */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: flex-end;
+            z-index: 100;
+        }
+        .overlay.hidden { display: none; }
+
+        .modal {
+            background: #1e1e1e;
+            border-radius: 16px 16px 0 0;
+            padding: 16px 18px 32px;
+            width: 100%;
+            max-height: 75dvh;
+            overflow-y: auto;
+        }
+
+        .modal-handle {
+            width: 36px; height: 4px;
+            background: #444;
+            border-radius: 2px;
+            margin: 0 auto 14px;
+        }
+        .modal-cat { font-size: 12px; color: #888; margin-bottom: 4px; }
+        .modal-name { font-size: 19px; font-weight: bold; margin-bottom: 14px; }
+
+        .field { margin-bottom: 10px; }
+        .field-label { font-size: 11px; color: #666; margin-bottom: 3px; }
+        .field-value { font-size: 14px; line-height: 1.6; }
+        .field-value.price { font-size: 18px; color: #f5a623; font-weight: bold; }
+
+        .close-btn {
+            display: block; width: 100%;
+            margin-top: 16px; padding: 13px;
+            background: #2a2a2a; color: #eee;
+            border: none; border-radius: 8px;
+            font-size: 15px; cursor: pointer;
+        }
+
+        /* ローディング */
+        .center {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            height: 100%; gap: 12px; color: #555; font-size: 14px;
+        }
+        .spinner {
+            width: 28px; height: 28px;
+            border: 3px solid #333; border-top-color: #c0392b;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .retry {
+            padding: 9px 20px; background: #c0392b;
+            color: #fff; border: none; border-radius: 8px;
+            font-size: 14px; cursor: pointer; margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="categories" id="categories"></div>
+    <div class="items" id="items">
+        <div class="center"><div class="spinner"></div><span>読み込み中...</span></div>
+    </div>
+
+    <div class="overlay hidden" id="overlay" onclick="onBgClick(event)">
+        <div class="modal">
+            <div class="modal-handle"></div>
+            <div class="modal-cat" id="m-cat"></div>
+            <div class="modal-name" id="m-name"></div>
+            <div id="m-body"></div>
+            <button class="close-btn" onclick="closeModal()">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_ID = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
+        const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+
+        let data = [];
+        let currentCat = null;
+
+        // ページを開いた時・サイドバーから戻った時に再取得
+        async function load() {
+            try {
+                const res = await fetch(URL + '&t=' + Date.now()); // キャッシュ無効化
+                const rows = parseCSV(await res.text()).slice(1).filter(r => r[0] && r[1]);
+                data = rows;
+                renderCats();
+                if (currentCat && data.some(r => r[0] === currentCat)) {
+                    renderItems(currentCat); // 同じカテゴリを維持
+                } else {
+                    const first = data[0]?.[0];
+                    if (first) selectCat(first);
+                }
+            } catch {
+                document.getElementById('items').innerHTML =
+                    `<div class="center"><span>読み込み失敗</span><button class="retry" onclick="load()">再試行</button></div>`;
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') load();
+        });
+
+        function parseCSV(text) {
+            const rows = [];
+            let row = [], cell = '', q = false;
+            for (let i = 0; i < text.length; i++) {
+                const c = text[i];
+                if (q) {
+                    if (c === '"') { if (text[i+1] === '"') { cell += '"'; i++; } else q = false; }
+                    else cell += c;
+                } else {
+                    if (c === '"') q = true;
+                    else if (c === ',') { row.push(cell.trim()); cell = ''; }
+                    else if (c === '\n' || c === '\r') {
+                        if (c === '\r' && text[i+1] === '\n') i++;
+                        row.push(cell.trim()); rows.push(row); row = []; cell = '';
+                    } else cell += c;
+                }
+            }
+            if (row.length) { row.push(cell.trim()); rows.push(row); }
+            return rows;
+        }
+
+        function getCats() {
+            const seen = new Set();
+            return data.map(r => r[0]).filter(c => c && !seen.has(c) && seen.add(c));
+        }
+
+        function renderCats() {
+            document.getElementById('categories').innerHTML = getCats()
+                .map(c => `<button class="cat-btn${c === currentCat ? ' active' : ''}" data-cat="${esc(c)}" onclick="selectCat(this.dataset.cat)">${esc(c)}</button>`)
+                .join('');
+        }
+
+        function selectCat(cat) {
+            currentCat = cat;
+            document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+            document.querySelector('.cat-btn.active')?.scrollIntoView({ inline: 'center', behavior: 'smooth', block: 'nearest' });
+            renderItems(cat);
+        }
+
+        function renderItems(cat) {
+            const items = data.map((r, i) => ({ r, i })).filter(({ r }) => r[0] === cat);
+            const el = document.getElementById('items');
+            el.innerHTML = items.map(({ r, i }) => {
+                const sub = [r[3], r[4]].filter(Boolean).join(' · ');
+                return `<div class="item-card" onclick="showDetail(${i})">
+                    <div>
+                        <div class="item-name">${esc(r[1])}</div>
+                        ${sub ? `<div class="item-sub">${esc(sub)}</div>` : ''}
+                    </div>
+                    ${r[2] ? `<div class="item-price">¥${esc(r[2])}</div>` : ''}
+                </div>`;
+            }).join('');
+            el.scrollTop = 0;
+        }
+
+        function showDetail(idx) {
+            const r = data[idx];
+            document.getElementById('m-cat').textContent = r[0];
+            document.getElementById('m-name').textContent = r[1];
+            const fields = [
+                ['値段',        r[2] ? `¥${r[2]}` : null, 'price'],
+                ['枚数 / グラム', r[3], ''],
+                ['材料 / 部位',  r[4], ''],
+                ['説明',         r[5], ''],
+                ['注意点',       r[6], ''],
+            ];
+            document.getElementById('m-body').innerHTML = fields
+                .filter(([, v]) => v)
+                .map(([label, val, cls]) => `
+                    <div class="field">
+                        <div class="field-label">${esc(label)}</div>
+                        <div class="field-value ${cls}">${esc(val)}</div>
+                    </div>`)
+                .join('');
+            document.getElementById('overlay').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('overlay').classList.add('hidden'); }
+        function onBgClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+        function esc(s) {
+            return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        load();
+    </script>
+</body>
+</html>
