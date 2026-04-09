@@ -3,6 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- PWA化（アプリ化）のための設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="メニュー案内">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href='data:application/manifest+json,{"name":"メニュー案内","short_name":"メニュー","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#141414"}'>
+
     <title>メニュー案内</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -13,14 +21,16 @@
             background: #000;
             font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
             overflow: hidden;
+            /* iOS Safariのバウンススクロールを防ぐ */
+            overscroll-behavior-y: none;
         }
 
-        /* アプリのメインコンテナ */
+        /* アプリのメインコンテナ（透明度を廃止し固定色に） */
         #app {
-            height: 100dvh;
+            height: 100dvh; /* スマホのアドレスバーやナビゲーションバーを考慮 */
             display: flex;
             flex-direction: column;
-            background: rgba(20, 20, 20, 0.85);
+            background: #141414;
             color: #eee;
             width: 100%;
         }
@@ -28,8 +38,10 @@
         /* ヘッダー部 */
         .header {
             padding: 12px 16px;
+            /* iPhoneのノッチ（上の出っ張り）を考慮した余白 */
+            padding-top: calc(12px + env(safe-area-inset-top)); 
             border-bottom: 1px solid #333;
-            background: rgba(0, 0, 0, 0.4);
+            background: #0a0a0a;
             flex-shrink: 0;
             display: flex;
             align-items: center;
@@ -49,11 +61,21 @@
             text-align: center;
         }
 
+        /* ネットワーク状態バッジ */
+        .offline-badge {
+            font-size: 10px; background: #e74c3c; color: #fff;
+            padding: 2px 6px; border-radius: 4px; display: none;
+            margin-left: 8px; font-weight: normal;
+        }
+        .offline-badge.visible { display: inline-block; }
+
         /* リスト部分 */
         .list-container {
             flex: 1;
             overflow-y: auto;
             padding: 0 16px;
+            /* iPhoneの下部バー（ホームインジケータ）を考慮した余白 */
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
             overscroll-behavior: contain;
         }
 
@@ -64,7 +86,6 @@
         }
         .list-item:last-child { border-bottom: none; }
 
-        /* 商品・カテゴリのヘッダー */
         .item-header {
             display: flex;
             justify-content: space-between;
@@ -79,7 +100,7 @@
             display: none;
             margin-top: 12px;
             padding: 12px;
-            background: rgba(0, 0, 0, 0.25);
+            background: #222;
             border-radius: 8px;
             font-size: 14px;
         }
@@ -89,30 +110,8 @@
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: #888; margin-bottom: 4px; }
         .field-value { color: #ddd; line-height: 1.5; }
-        
-        /* 注意点やアレルギーなどの警告テキスト */
         .field-value.alert-text { color: #ff6b6b; font-weight: bold; }
 
-        /* フッター部（透明度スライダー） */
-        .footer {
-            padding: 12px 16px;
-            border-top: 1px solid #333;
-            background: rgba(0, 0, 0, 0.4);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .opacity-wrap {
-            display: flex; align-items: center; gap: 12px; width: 100%; max-width: 300px;
-        }
-        .opacity-icon { font-size: 18px; color: #aaa; }
-        #opacity-slider {
-            flex: 1; height: 4px; accent-color: #c0392b; cursor: pointer;
-        }
-
-        /* ローディング */
         .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
     </style>
 </head>
@@ -122,21 +121,16 @@
     <!-- ヘッダー -->
     <div class="header">
         <button class="back-btn" id="back-btn" onclick="renderCats()">‹</button>
-        <div class="header-title" id="header-title">読み込み中...</div>
+        <div class="header-title">
+            <span id="header-title-text" data-cat="">読み込み中...</span>
+            <span id="offline-badge" class="offline-badge">オフライン</span>
+        </div>
         <div style="width: 40px; display: none;" id="header-spacer"></div>
     </div>
 
     <!-- リスト -->
     <div class="list-container" id="item-list">
-        <div class="status-msg">データを取得しています...</div>
-    </div>
-
-    <!-- フッター（透明度調整） -->
-    <div class="footer">
-        <div class="opacity-wrap">
-            <span class="opacity-icon">◑</span>
-            <input type="range" id="opacity-slider" min="20" max="100" value="85" oninput="setOpacity(this.value)">
-        </div>
+        <div class="status-msg">データを準備しています...</div>
     </div>
 </div>
 
@@ -144,45 +138,76 @@
     const SHEET_ID = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
     const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
 
-    let data = []; // [{cat, name, price, amount, fat, parts, desc, note, allergy}]
+    let data = [];
 
-    // 透明度設定
-    function setOpacity(val) {
-        const alpha = (val / 100).toFixed(2);
-        document.getElementById('app').style.background = `rgba(20, 20, 20, ${alpha})`;
-    }
-
-    // 起動時にデータを取得
+    // アプリ起動時の処理（ハイブリッド方式）
     async function load() {
+        const listEl = document.getElementById('item-list');
+        const badgeEl = document.getElementById('offline-badge');
+        
+        // 1. まずローカルストレージ（スマホ内）に保存された前回データがあるか確認
+        const cachedCsv = localStorage.getItem('menuCsvData');
+        
+        if (cachedCsv) {
+            // 保存データがあれば、一瞬で画面を描画する
+            parseAndRender(cachedCsv);
+        }
+
+        // 2. 裏側で最新データをスプレッドシートに取りに行く
         try {
             const res = await fetch(CSV_URL + '&t=' + Date.now());
+            if (!res.ok) throw new Error('Network response was not ok');
+            
             const text = await res.text();
-            const rows = parseCSV(text);
+            
+            // 取得に成功したら、スマホ内のデータを最新に上書き保存
+            localStorage.setItem('menuCsvData', text);
+            
+            // 画面も最新データで上書き描画
+            parseAndRender(text);
+            badgeEl.classList.remove('visible'); // オフラインバッジを消す
 
-            let lastCat = '';
-            // 新しいスプレッドシートの列の順番に合わせたマッピング
-            data = rows.slice(1)
-                .map(r => {
-                    if (r[0]) lastCat = r[0];
-                    return {
-                        cat:     lastCat,
-                        name:    r[1] || '',
-                        price:   r[2] || '',
-                        amount:  r[3] || '',
-                        fat:     r[4] || '', // 追加：肉の脂の量
-                        parts:   r[5] || '', // 変更：材料or部位
-                        desc:    r[6] || '', // 変更：商品説明
-                        note:    r[7] || '', // 変更：注意点
-                        allergy: r[8] || '', // 追加：アレルギー
-                    };
-                })
-                .filter(r => r.name);
-
-            renderCats();
         } catch (e) {
-            document.getElementById('item-list').innerHTML = 
-                `<div class="status-msg">読み込み失敗。<br><button onclick="load()" style="margin-top:15px; padding:8px 16px;">再試行</button></div>`;
-            document.getElementById('header-title').textContent = 'エラー';
+            // 取得に失敗（Wi-Fiが繋がっていない等）した場合
+            if (cachedCsv) {
+                // キャッシュがある場合はそのまま表示を続け、オフラインバッジを出す
+                badgeEl.classList.add('visible');
+            } else {
+                // 初回起動でオフラインの場合はエラーを出す
+                listEl.innerHTML = 
+                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px; padding:8px 16px; border-radius:6px; border:none; background:#555; color:#fff;">再試行</button></div>`;
+                document.getElementById('header-title-text').textContent = 'エラー';
+            }
+        }
+    }
+
+    // CSVを解析してデータを整え、画面を描画する関数
+    function parseAndRender(text) {
+        const rows = parseCSV(text);
+        let lastCat = '';
+        data = rows.slice(1)
+            .map(r => {
+                if (r[0]) lastCat = r[0];
+                return {
+                    cat:     lastCat,
+                    name:    r[1] || '',
+                    price:   r[2] || '',
+                    amount:  r[3] || '',
+                    fat:     r[4] || '',
+                    parts:   r[5] || '',
+                    desc:    r[6] || '',
+                    note:    r[7] || '',
+                    allergy: r[8] || '',
+                };
+            })
+            .filter(r => r.name);
+
+        // 現在どの画面（カテゴリ）を開いているか判別して再描画
+        const currentCat = document.getElementById('header-title-text').dataset.cat;
+        if (currentCat) {
+            renderItems(currentCat);
+        } else {
+            renderCats();
         }
     }
 
@@ -212,10 +237,12 @@
     function renderCats() {
         const backBtn = document.getElementById('back-btn');
         const spacer = document.getElementById('header-spacer');
+        const titleText = document.getElementById('header-title-text');
         
         backBtn.classList.remove('visible');
         spacer.style.display = 'none';
-        document.getElementById('header-title').textContent = 'カテゴリ';
+        titleText.textContent = 'カテゴリ';
+        titleText.dataset.cat = '';
 
         const seen = new Set();
         const cats = data.map(r => r.cat).filter(c => c && !seen.has(c) && seen.add(c));
@@ -239,23 +266,24 @@
     function renderItems(cat) {
         const backBtn = document.getElementById('back-btn');
         const spacer = document.getElementById('header-spacer');
+        const titleText = document.getElementById('header-title-text');
         
         backBtn.classList.add('visible');
         spacer.style.display = 'block';
-        document.getElementById('header-title').textContent = cat;
+        titleText.textContent = cat;
+        titleText.dataset.cat = cat;
 
         const items = data.filter(r => r.cat === cat);
         const listEl = document.getElementById('item-list');
 
         listEl.innerHTML = items.map((item) => {
-            // 表示する項目を定義（値がないものはフィルターで除外）
             const details = [
                 { label: '枚数/グラム', val: item.amount, isAlert: false },
                 { label: '脂の量', val: item.fat, isAlert: false },
                 { label: '材料/部位', val: item.parts, isAlert: false },
                 { label: '説明', val: item.desc, isAlert: false },
-                { label: '注意点', val: item.note, isAlert: true },   // 赤字にするフラグ
-                { label: 'アレルギー', val: item.allergy, isAlert: true } // 赤字にするフラグ
+                { label: '注意点', val: item.note, isAlert: true },
+                { label: 'アレルギー', val: item.allergy, isAlert: true }
             ].filter(d => d.val);
 
             let detailsHtml = '';
@@ -284,7 +312,6 @@
         listEl.scrollTop = 0;
     }
 
-    // HTMLエスケープ処理
     function esc(s) {
         return String(s ?? '')
             .replace(/&/g,'&amp;').replace(/</g,'&lt;')
