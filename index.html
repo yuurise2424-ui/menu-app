@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- PWA化（アプリ化）のための設定 -->
+    <!-- PWA化（アプリ化）のための強力な設定 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="メニュー案内">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSIxMjAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPueJmzwvdGV4dD48L3N2Zz4=">
+    
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href='data:application/manifest+json,{"name":"メニュー案内","short_name":"メニュー","start_url":".","display":"standalone","background_color":"#000000","theme_color":"#141414"}'>
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E3%83%A1%E3%83%8B%E3%83%A5%E3%83%BC%E6%A1%88%E5%86%85%22%2C%22short_name%22%3A%22%E3%83%A1%E3%83%8B%E3%83%A5%E3%83%BC%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000000%22%2C%22theme_color%22%3A%22%23141414%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSIxMjAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPueJmzwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9IjI1NiIgeT0iMzIwIiBmb250LXNpemU9IjE2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2ZmZmZmZiI%2BeJmzwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
 
     <title>メニュー案内</title>
     <style>
@@ -21,13 +23,11 @@
             background: #000;
             font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
             overflow: hidden;
-            /* iOS Safariのバウンススクロールを防ぐ */
             overscroll-behavior-y: none;
         }
 
-        /* アプリのメインコンテナ（透明度を廃止し固定色に） */
         #app {
-            height: 100dvh; /* スマホのアドレスバーやナビゲーションバーを考慮 */
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             background: #141414;
@@ -38,7 +38,6 @@
         /* ヘッダー部 */
         .header {
             padding: 12px 16px;
-            /* iPhoneのノッチ（上の出っ張り）を考慮した余白 */
             padding-top: calc(12px + env(safe-area-inset-top)); 
             border-bottom: 1px solid #333;
             background: #0a0a0a;
@@ -61,7 +60,6 @@
             text-align: center;
         }
 
-        /* ネットワーク状態バッジ */
         .offline-badge {
             font-size: 10px; background: #e74c3c; color: #fff;
             padding: 2px 6px; border-radius: 4px; display: none;
@@ -74,7 +72,6 @@
             flex: 1;
             overflow-y: auto;
             padding: 0 16px;
-            /* iPhoneの下部バー（ホームインジケータ）を考慮した余白 */
             padding-bottom: calc(16px + env(safe-area-inset-bottom));
             overscroll-behavior: contain;
         }
@@ -93,7 +90,6 @@
         }
         .item-name { font-size: 16px; font-weight: bold; flex: 1; line-height: 1.4; }
         .item-price { font-size: 15px; color: #f5a623; margin-left: 12px; white-space: nowrap; }
-        .arrow { color: #666; font-size: 18px; margin-left: 12px; }
 
         /* 商品の詳細（アコーディオン） */
         .item-details {
@@ -110,7 +106,12 @@
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: #888; margin-bottom: 4px; }
         .field-value { color: #ddd; line-height: 1.5; }
+        
+        /* 注意点やアレルギーなどの警告テキスト */
         .field-value.alert-text { color: #ff6b6b; font-weight: bold; }
+        
+        /* 接客時の説明（水色で区別） */
+        .field-value.guide-text { color: #8bd3e6; }
 
         .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
     </style>
@@ -145,35 +146,27 @@
         const listEl = document.getElementById('item-list');
         const badgeEl = document.getElementById('offline-badge');
         
-        // 1. まずローカルストレージ（スマホ内）に保存された前回データがあるか確認
         const cachedCsv = localStorage.getItem('menuCsvData');
         
         if (cachedCsv) {
-            // 保存データがあれば、一瞬で画面を描画する
             parseAndRender(cachedCsv);
         }
 
-        // 2. 裏側で最新データをスプレッドシートに取りに行く
         try {
             const res = await fetch(CSV_URL + '&t=' + Date.now());
             if (!res.ok) throw new Error('Network response was not ok');
             
             const text = await res.text();
             
-            // 取得に成功したら、スマホ内のデータを最新に上書き保存
             localStorage.setItem('menuCsvData', text);
             
-            // 画面も最新データで上書き描画
             parseAndRender(text);
-            badgeEl.classList.remove('visible'); // オフラインバッジを消す
+            badgeEl.classList.remove('visible');
 
         } catch (e) {
-            // 取得に失敗（Wi-Fiが繋がっていない等）した場合
             if (cachedCsv) {
-                // キャッシュがある場合はそのまま表示を続け、オフラインバッジを出す
                 badgeEl.classList.add('visible');
             } else {
-                // 初回起動でオフラインの場合はエラーを出す
                 listEl.innerHTML = 
                     `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px; padding:8px 16px; border-radius:6px; border:none; background:#555; color:#fff;">再試行</button></div>`;
                 document.getElementById('header-title-text').textContent = 'エラー';
@@ -193,16 +186,16 @@
                     name:    r[1] || '',
                     price:   r[2] || '',
                     amount:  r[3] || '',
-                    fat:     r[4] || '',
-                    parts:   r[5] || '',
-                    desc:    r[6] || '',
-                    note:    r[7] || '',
-                    allergy: r[8] || '',
+                    fat:     r[4] || '', // 肉の脂の量
+                    parts:   r[5] || '', // 材料or部位
+                    desc:    r[6] || '', // 商品説明
+                    guide:   r[7] || '', // 接客の際の商品説明。
+                    note:    r[8] || '', // 注意点
+                    allergy: r[9] || '', // アレルギー
                 };
             })
             .filter(r => r.name);
 
-        // 現在どの画面（カテゴリ）を開いているか判別して再描画
         const currentCat = document.getElementById('header-title-text').dataset.cat;
         if (currentCat) {
             renderItems(currentCat);
@@ -278,12 +271,13 @@
 
         listEl.innerHTML = items.map((item) => {
             const details = [
-                { label: '枚数/グラム', val: item.amount, isAlert: false },
-                { label: '脂の量', val: item.fat, isAlert: false },
-                { label: '材料/部位', val: item.parts, isAlert: false },
-                { label: '説明', val: item.desc, isAlert: false },
-                { label: '注意点', val: item.note, isAlert: true },
-                { label: 'アレルギー', val: item.allergy, isAlert: true }
+                { label: '枚数/グラム', val: item.amount, isAlert: false, isGuide: false },
+                { label: '脂の量', val: item.fat, isAlert: false, isGuide: false },
+                { label: '材料/部位', val: item.parts, isAlert: false, isGuide: false },
+                { label: '説明', val: item.desc, isAlert: false, isGuide: false },
+                { label: '接客時の説明', val: item.guide, isAlert: false, isGuide: true }, // ここを追加（水色）
+                { label: '注意点', val: item.note, isAlert: true, isGuide: false },
+                { label: 'アレルギー', val: item.allergy, isAlert: true, isGuide: false }
             ].filter(d => d.val);
 
             let detailsHtml = '';
@@ -292,7 +286,7 @@
                     details.map(d => `
                         <div class="field">
                             <div class="field-label">${esc(d.label)}</div>
-                            <div class="field-value ${d.isAlert ? 'alert-text' : ''}">${esc(d.val)}</div>
+                            <div class="field-value ${d.isAlert ? 'alert-text' : ''} ${d.isGuide ? 'guide-text' : ''}">${esc(d.val)}</div>
                         </div>
                     `).join('') + 
                 `</div>`;
