@@ -112,6 +112,9 @@
         
         /* 接客時の説明（水色で区別） */
         .field-value.guide-text { color: #8bd3e6; }
+        
+        /* 付けるもの（黄色で区別） */
+        .field-value.condiment-text { color: #f9d71c; }
 
         .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
     </style>
@@ -182,16 +185,17 @@
             .map(r => {
                 if (r[0]) lastCat = r[0];
                 return {
-                    cat:     lastCat,
-                    name:    r[1] || '',
-                    price:   r[2] || '',
-                    amount:  r[3] || '',
-                    fat:     r[4] || '', // 肉の脂の量
-                    parts:   r[5] || '', // 材料or部位
-                    desc:    r[6] || '', // 商品説明
-                    guide:   r[7] || '', // 接客の際の商品説明。
-                    note:    r[8] || '', // 注意点
-                    allergy: r[9] || '', // アレルギー
+                    cat:       lastCat,
+                    name:      r[1] || '',
+                    price:     r[2] || '',
+                    amount:    r[3] || '',
+                    fat:       r[4] || '', // 肉の脂の量
+                    parts:     r[5] || '', // 材料or部位
+                    desc:      r[6] || '', // 商品説明
+                    guide:     r[7] || '', // 接客の際の商品説明。
+                    condiment: r[8] || '', // 付けるもの（I列）
+                    note:      r[9] || '', // 注意点（J列へシフト）
+                    allergy:   r[10] || '', // アレルギー（K列へシフト）
                 };
             })
             .filter(r => r.name);
@@ -271,13 +275,14 @@
 
         listEl.innerHTML = items.map((item) => {
             const details = [
-                { label: '枚数/グラム', val: item.amount, isAlert: false, isGuide: false },
-                { label: '脂の量', val: item.fat, isAlert: false, isGuide: false },
-                { label: '材料/部位', val: item.parts, isAlert: false, isGuide: false },
-                { label: '説明', val: item.desc, isAlert: false, isGuide: false },
-                { label: '接客時の説明', val: item.guide, isAlert: false, isGuide: true }, // ここを追加（水色）
-                { label: '注意点', val: item.note, isAlert: true, isGuide: false },
-                { label: 'アレルギー', val: item.allergy, isAlert: true, isGuide: false }
+                { label: '枚数/グラム', val: item.amount, isAlert: false, isGuide: false, isCondiment: false },
+                { label: '脂の量', val: item.fat, isAlert: false, isGuide: false, isCondiment: false },
+                { label: '材料/部位', val: item.parts, isAlert: false, isGuide: false, isCondiment: false },
+                { label: '説明', val: item.desc, isAlert: false, isGuide: false, isCondiment: false },
+                { label: '接客時の説明', val: item.guide, isAlert: false, isGuide: true, isCondiment: false },
+                { label: '付けるもの', val: item.condiment, isAlert: false, isGuide: false, isCondiment: true }, // ここを追加（黄色）
+                { label: '注意点', val: item.note, isAlert: true, isGuide: false, isCondiment: false },
+                { label: 'アレルギー', val: item.allergy, isAlert: true, isGuide: false, isCondiment: false }
             ].filter(d => d.val);
 
             let detailsHtml = '';
@@ -286,7 +291,7 @@
                     details.map(d => `
                         <div class="field">
                             <div class="field-label">${esc(d.label)}</div>
-                            <div class="field-value ${d.isAlert ? 'alert-text' : ''} ${d.isGuide ? 'guide-text' : ''}">${esc(d.val)}</div>
+                            <div class="field-value ${d.isAlert ? 'alert-text' : ''} ${d.isGuide ? 'guide-text' : ''} ${d.isCondiment ? 'condiment-text' : ''}">${esc(d.val)}</div>
                         </div>
                     `).join('') + 
                 `</div>`;
