@@ -3,21 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <!-- PWA化（アプリ化）のための強力な設定 -->
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="メニュー案内">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSIxMjAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPueJmzwvdGV4dD48L3N2Zz4=">
-    
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSI4MiIgZm9udC1zaXplPSI2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2ZmZmZmZiI+5p2OPC90ZXh0Pjx0ZXh0IHg9Ijk2IiB5PSIxNTAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPuaYhzwvdGV4dD48L3N2Zz4=">
+
     <meta name="mobile-web-app-capable" content="yes">
-    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E3%83%A1%E3%83%8B%E3%83%A5%E3%83%BC%E6%A1%88%E5%86%85%22%2C%22short_name%22%3A%22%E3%83%A1%E3%83%8B%E3%83%A5%E3%83%BC%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23000000%22%2C%22theme_color%22%3A%22%23141414%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSIxMjAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPueJmzwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22192x192%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%2C%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9IjI1NiIgeT0iMzIwIiBmb250LXNpemU9IjE2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2ZmZmZmZiI%2BeJmzwvdGV4dD48L3N2Zz4%3D%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D">
+    <link rel="manifest" href="./manifest.json">
 
     <title>メニュー案内</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-        /* 全画面表示のベース設定 */
         html, body {
             height: 100%;
             background: #000;
@@ -35,10 +33,9 @@
             width: 100%;
         }
 
-        /* ヘッダー部 */
         .header {
             padding: 12px 16px;
-            padding-top: calc(12px + env(safe-area-inset-top)); 
+            padding-top: calc(12px + env(safe-area-inset-top));
             border-bottom: 1px solid #333;
             background: #0a0a0a;
             flex-shrink: 0;
@@ -46,7 +43,7 @@
             align-items: center;
             gap: 12px;
         }
-        
+
         .back-btn {
             background: none; border: none; color: #aaa;
             font-size: 24px; cursor: pointer;
@@ -67,7 +64,6 @@
         }
         .offline-badge.visible { display: inline-block; }
 
-        /* リスト部分 */
         .list-container {
             flex: 1;
             overflow-y: auto;
@@ -76,6 +72,30 @@
             overscroll-behavior: contain;
         }
 
+        /* トップ選択画面 */
+        .mode-select {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 32px 0;
+        }
+
+        .mode-btn {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 12px;
+            padding: 36px 16px;
+            color: #eee;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            letter-spacing: 0.1em;
+            width: 100%;
+        }
+        .mode-btn:active { background: #2e2e2e; }
+
+        /* リスト */
         .list-item {
             border-bottom: 1px solid #333;
             padding: 16px 0;
@@ -90,8 +110,8 @@
         }
         .item-name { font-size: 16px; font-weight: bold; flex: 1; line-height: 1.4; }
         .item-price { font-size: 15px; color: #f5a623; margin-left: 12px; white-space: nowrap; }
+        .arrow { color: #666; font-size: 18px; margin-left: 12px; }
 
-        /* 商品の詳細（アコーディオン） */
         .item-details {
             display: none;
             margin-top: 12px;
@@ -101,19 +121,14 @@
             font-size: 14px;
         }
         .list-item.open .item-details { display: block; }
-        
+
         .field { margin-bottom: 10px; }
         .field:last-child { margin-bottom: 0; }
         .field-label { font-size: 12px; color: #888; margin-bottom: 4px; }
         .field-value { color: #ddd; line-height: 1.5; }
-        
-        /* 注意点やアレルギーなどの警告テキスト */
+
         .field-value.alert-text { color: #ff6b6b; font-weight: bold; }
-        
-        /* 接客時の説明（水色で区別） */
         .field-value.guide-text { color: #8bd3e6; }
-        
-        /* 付けるもの（黄色で区別） */
         .field-value.condiment-text { color: #f9d71c; }
 
         .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
@@ -122,17 +137,15 @@
 <body>
 
 <div id="app">
-    <!-- ヘッダー -->
     <div class="header">
-        <button class="back-btn" id="back-btn" onclick="renderCats()">‹</button>
+        <button class="back-btn" id="back-btn">‹</button>
         <div class="header-title">
-            <span id="header-title-text" data-cat="">読み込み中...</span>
+            <span id="header-title-text">読み込み中...</span>
             <span id="offline-badge" class="offline-badge">オフライン</span>
         </div>
         <div style="width: 40px; display: none;" id="header-spacer"></div>
     </div>
 
-    <!-- リスト -->
     <div class="list-container" id="item-list">
         <div class="status-msg">データを準備しています...</div>
     </div>
@@ -140,75 +153,89 @@
 
 <script>
     const SHEET_ID = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
-    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=フード`;
+    const FOOD_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=フード`;
+    const DRINK_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=ドリンク`;
 
-    let data = [];
+    let foodData  = [];
+    let drinkData = [];
+    let currentMode = null; // null | 'food' | 'drink'
+    let currentCat  = '';
 
-    // アプリ起動時の処理（ハイブリッド方式）
-    async function load() {
-        const listEl = document.getElementById('item-list');
-        const badgeEl = document.getElementById('offline-badge');
-        
-        const cachedCsv = localStorage.getItem('menuCsvData');
-        
-        if (cachedCsv) {
-            parseAndRender(cachedCsv);
-        }
-
-        try {
-            const res = await fetch(CSV_URL + '&t=' + Date.now());
-            if (!res.ok) throw new Error('Network response was not ok');
-            
-            const text = await res.text();
-            
-            localStorage.setItem('menuCsvData', text);
-            
-            parseAndRender(text);
-            badgeEl.classList.remove('visible');
-
-        } catch (e) {
-            if (cachedCsv) {
-                badgeEl.classList.add('visible');
-            } else {
-                listEl.innerHTML = 
-                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px; padding:8px 16px; border-radius:6px; border:none; background:#555; color:#fff;">再試行</button></div>`;
-                document.getElementById('header-title-text').textContent = 'エラー';
-            }
-        }
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
 
-    // CSVを解析してデータを整え、画面を描画する関数
-    function parseAndRender(text) {
+    async function load() {
+        const badgeEl = document.getElementById('offline-badge');
+
+        const cachedFood  = localStorage.getItem('menuFoodData');
+        const cachedDrink = localStorage.getItem('menuDrinkData');
+
+        if (cachedFood)  foodData  = parseFoodCSV(cachedFood);
+        if (cachedDrink) drinkData = parseDrinkCSV(cachedDrink);
+        if (cachedFood || cachedDrink) renderCurrent();
+
+        let networkError = false;
+
+        await Promise.all([
+            fetch(FOOD_URL + '&t=' + Date.now())
+                .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+                .then(text => { localStorage.setItem('menuFoodData', text); foodData = parseFoodCSV(text); })
+                .catch(() => { networkError = true; }),
+
+            fetch(DRINK_URL + '&t=' + Date.now())
+                .then(r => { if (!r.ok) throw new Error(); return r.text(); })
+                .then(text => { localStorage.setItem('menuDrinkData', text); drinkData = parseDrinkCSV(text); })
+                .catch(() => { networkError = true; })
+        ]);
+
+        if (networkError) {
+            if (!cachedFood && !cachedDrink) {
+                document.getElementById('item-list').innerHTML =
+                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
+                document.getElementById('header-title-text').textContent = 'エラー';
+                return;
+            }
+            badgeEl.classList.add('visible');
+        } else {
+            badgeEl.classList.remove('visible');
+        }
+
+        renderCurrent();
+    }
+
+    function renderCurrent() {
+        if (currentMode === null) renderTop();
+        else if (currentCat === '') renderCats(currentMode);
+        else renderItems(currentMode, currentCat);
+    }
+
+    function parseFoodCSV(text) {
         const rows = parseCSV(text);
         let lastCat = '';
-        data = rows.slice(1)
-            .map(r => {
-                if (r[0]) lastCat = r[0];
-                return {
-                    cat:       lastCat,
-                    name:      r[1] || '',
-                    price:     r[2] || '',
-                    amount:    r[3] || '',
-                    fat:       r[4] || '', // 肉の脂の量
-                    parts:     r[5] || '', // 材料or部位
-                    desc:      r[6] || '', // 商品説明
-                    guide:     r[7] || '', // 接客の際の商品説明。
-                    condiment: r[8] || '', // 付けるもの（I列）
-                    note:      r[9] || '', // 注意点（J列へシフト）
-                    allergy:   r[10] || '', // アレルギー（K列へシフト）
-                };
-            })
-            .filter(r => r.name);
-
-        const currentCat = document.getElementById('header-title-text').dataset.cat;
-        if (currentCat) {
-            renderItems(currentCat);
-        } else {
-            renderCats();
-        }
+        return rows.slice(1).map(r => {
+            if (r[0]) lastCat = r[0];
+            return {
+                cat: lastCat, name: r[1] || '', price: r[2] || '',
+                amount: r[3] || '', fat: r[4] || '', parts: r[5] || '',
+                desc: r[6] || '', guide: r[7] || '', condiment: r[8] || '',
+                note: r[9] || '', allergy: r[10] || '',
+            };
+        }).filter(r => r.name);
     }
 
-    // CSVパーサー
+    function parseDrinkCSV(text) {
+        const rows = parseCSV(text);
+        let lastCat = '';
+        return rows.slice(1).map(r => {
+            if (r[0]) lastCat = r[0];
+            return {
+                cat: lastCat, name: r[1] || '',
+                glass: r[2] || '', amount: r[3] || '', note: r[4] || '',
+            };
+        }).filter(r => r.name);
+    }
+
     function parseCSV(text) {
         const rows = [];
         let row = [], cell = '', q = false;
@@ -230,17 +257,39 @@
         return rows;
     }
 
-    // カテゴリ一覧の描画
-    function renderCats() {
-        const backBtn = document.getElementById('back-btn');
-        const spacer = document.getElementById('header-spacer');
-        const titleText = document.getElementById('header-title-text');
-        
-        backBtn.classList.remove('visible');
-        spacer.style.display = 'none';
-        titleText.textContent = 'カテゴリ';
-        titleText.dataset.cat = '';
+    function setHeader(title, backFn) {
+        const backBtn  = document.getElementById('back-btn');
+        const spacer   = document.getElementById('header-spacer');
+        const titleEl  = document.getElementById('header-title-text');
+        titleEl.textContent = title;
+        if (backFn) {
+            backBtn.classList.add('visible');
+            backBtn.onclick = backFn;
+            spacer.style.display = 'block';
+        } else {
+            backBtn.classList.remove('visible');
+            spacer.style.display = 'none';
+        }
+    }
 
+    function renderTop() {
+        currentMode = null;
+        currentCat  = '';
+        setHeader('メニュー案内', null);
+        document.getElementById('item-list').innerHTML = `
+            <div class="mode-select">
+                <button class="mode-btn" onclick="renderCats('food')">フード</button>
+                <button class="mode-btn" onclick="renderCats('drink')">ドリンク</button>
+            </div>
+        `;
+    }
+
+    function renderCats(mode) {
+        currentMode = mode;
+        currentCat  = '';
+        setHeader(mode === 'food' ? 'フード' : 'ドリンク', renderTop);
+
+        const data = mode === 'food' ? foodData : drinkData;
         const seen = new Set();
         const cats = data.map(r => r.cat).filter(c => c && !seen.has(c) && seen.add(c));
 
@@ -250,64 +299,60 @@
         }
 
         document.getElementById('item-list').innerHTML = cats.map(cat => `
-            <div class="list-item" onclick="renderItems('${esc(cat)}')">
+            <div class="list-item" onclick="renderItems('${mode}','${esc(cat)}')">
                 <div class="item-header">
                     <div class="item-name">${esc(cat)}</div>
                     <div class="arrow">›</div>
                 </div>
             </div>
         `).join('');
+        document.getElementById('item-list').scrollTop = 0;
     }
 
-    // アイテム一覧の描画
-    function renderItems(cat) {
-        const backBtn = document.getElementById('back-btn');
-        const spacer = document.getElementById('header-spacer');
-        const titleText = document.getElementById('header-title-text');
-        
-        backBtn.classList.add('visible');
-        spacer.style.display = 'block';
-        titleText.textContent = cat;
-        titleText.dataset.cat = cat;
+    function renderItems(mode, cat) {
+        currentCat = cat;
+        setHeader(cat, () => renderCats(mode));
 
+        const data  = mode === 'food' ? foodData : drinkData;
         const items = data.filter(r => r.cat === cat);
         const listEl = document.getElementById('item-list');
 
-        listEl.innerHTML = items.map((item) => {
-            const details = [
-                { label: '枚数/グラム', val: item.amount, isAlert: false, isGuide: false, isCondiment: false },
-                { label: '脂の量', val: item.fat, isAlert: false, isGuide: false, isCondiment: false },
-                { label: '材料/部位', val: item.parts, isAlert: false, isGuide: false, isCondiment: false },
-                { label: '説明', val: item.desc, isAlert: false, isGuide: false, isCondiment: false },
-                { label: '接客時の説明', val: item.guide, isAlert: false, isGuide: true, isCondiment: false },
-                { label: '付けるもの', val: item.condiment, isAlert: false, isGuide: false, isCondiment: true }, // ここを追加（黄色）
-                { label: '注意点', val: item.note, isAlert: true, isGuide: false, isCondiment: false },
-                { label: 'アレルギー', val: item.allergy, isAlert: true, isGuide: false, isCondiment: false }
-            ].filter(d => d.val);
+        listEl.innerHTML = items.map(item => {
+            const fields = mode === 'food'
+                ? [
+                    { label: '枚数/グラム',   val: item.amount,    cls: '' },
+                    { label: '脂の量',         val: item.fat,       cls: '' },
+                    { label: '材料/部位',       val: item.parts,     cls: '' },
+                    { label: '説明',            val: item.desc,      cls: '' },
+                    { label: '接客時の説明',    val: item.guide,     cls: 'guide-text' },
+                    { label: '付けるもの',      val: item.condiment, cls: 'condiment-text' },
+                    { label: '注意点',          val: item.note,      cls: 'alert-text' },
+                    { label: 'アレルギー',      val: item.allergy,   cls: 'alert-text' },
+                ]
+                : [
+                    { label: 'グラスの種類',   val: item.glass,  cls: '' },
+                    { label: '分量詳細',        val: item.amount, cls: 'guide-text' },
+                    { label: 'その他',          val: item.note,   cls: 'alert-text' },
+                ];
 
-            let detailsHtml = '';
-            if (details.length > 0) {
-                detailsHtml = `<div class="item-details">` + 
-                    details.map(d => `
-                        <div class="field">
-                            <div class="field-label">${esc(d.label)}</div>
-                            <div class="field-value ${d.isAlert ? 'alert-text' : ''} ${d.isGuide ? 'guide-text' : ''} ${d.isCondiment ? 'condiment-text' : ''}">${esc(d.val)}</div>
-                        </div>
-                    `).join('') + 
-                `</div>`;
-            }
+            const detailsHtml = fields.filter(d => d.val).length > 0
+                ? `<div class="item-details">${fields.filter(d => d.val).map(d => `
+                    <div class="field">
+                        <div class="field-label">${esc(d.label)}</div>
+                        <div class="field-value ${d.cls}">${esc(d.val).replace(/\n/g,'<br>')}</div>
+                    </div>`).join('')}</div>`
+                : '';
 
             return `
-                <div class="list-item" onclick="if(this.querySelector('.item-details')) this.classList.toggle('open')">
+                <div class="list-item" onclick="if(this.querySelector('.item-details'))this.classList.toggle('open')">
                     <div class="item-header">
                         <div class="item-name">${esc(item.name)}</div>
                         ${item.price ? `<div class="item-price">${esc(item.price)}</div>` : ''}
                     </div>
                     ${detailsHtml}
-                </div>
-            `;
+                </div>`;
         }).join('');
-        
+
         listEl.scrollTop = 0;
     }
 
