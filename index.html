@@ -148,6 +148,52 @@
             background: #111;
         }
 
+        /* 動画サムネイル（タップ前） */
+        .video-thumb {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            margin-top: 4px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0e0e0e;
+            cursor: pointer;
+            border: 1px solid #333;
+        }
+        .video-thumb-bg {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0.65;
+        }
+        .play-overlay {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .play-circle {
+            width: 60px; height: 60px;
+            background: rgba(255,255,255,0.93);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: #111;
+            padding-left: 4px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.6);
+        }
+        .play-label {
+            color: #fff;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+            letter-spacing: 0.05em;
+        }
+        /* 動画iframe（タップ後） */
         .video-wrap {
             position: relative;
             width: 100%;
@@ -155,13 +201,22 @@
             margin-top: 4px;
             border-radius: 8px;
             overflow: hidden;
-            background: #111;
+            background: #000;
         }
         .video-embed {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             border: none;
+        }
+        /* HTML5 video */
+        .item-video {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 4px;
+            display: block;
+            background: #000;
+            max-height: 400px;
         }
 
         .media-link {
@@ -544,22 +599,64 @@
         // YouTube
         const yt = u.match(/(?:youtube\.com\/watch\?[^#]*v=|youtu\.be\/)([^&\s?#]+)/);
         if (yt) {
-            return `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${yt[1]}" class="video-embed" allowfullscreen loading="lazy"></iframe></div>`;
+            const id    = yt[1];
+            const embed = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
+            const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+            return `
+                <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
+                    <img src="${thumb}" class="video-thumb-bg" alt="">
+                    <div class="play-overlay">
+                        <div class="play-circle">&#9654;</div>
+                        <div class="play-label">タップして再生</div>
+                    </div>
+                </div>`;
         }
 
-        // Google Drive
+        // Google Drive（動画・画像両対応）
         const gd = u.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
         if (gd) {
-            return `<img src="https://drive.google.com/thumbnail?id=${gd[1]}&sz=w800" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
+            const id    = gd[1];
+            const embed = `https://drive.google.com/file/d/${id}/preview`;
+            const thumb = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+            return `
+                <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
+                    <img src="${thumb}" class="video-thumb-bg" alt="" onerror="this.style.display='none'">
+                    <div class="play-overlay">
+                        <div class="play-circle">&#9654;</div>
+                        <div class="play-label">タップして再生</div>
+                    </div>
+                </div>`;
         }
 
-        // Direct image URL
+        // 直接動画ファイル (.mp4 など)
+        if (/\.(mp4|mov|webm|m4v)([?#]|$)/i.test(u)) {
+            return `<video controls playsinline class="item-video" onclick="event.stopPropagation()">
+                        <source src="${esc(u)}">
+                    </video>`;
+        }
+
+        // 直接画像ファイル
         if (/\.(jpe?g|png|gif|webp|avif|bmp|svg)([?#]|$)/i.test(u)) {
             return `<img src="${esc(u)}" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
         }
 
-        // Other: show as link
+        // その他リンク
         return `<a href="${esc(u)}" target="_blank" rel="noopener" class="media-link">&#8599; リンクを開く</a>`;
+    }
+
+    function loadVideo(el, embedUrl) {
+        el.innerHTML = `<iframe
+            src="${embedUrl}"
+            class="video-embed"
+            allowfullscreen
+            webkitallowfullscreen
+            mozallowfullscreen
+            allow="autoplay; fullscreen; picture-in-picture"
+        ></iframe>`;
+        el.classList.remove('video-thumb');
+        el.classList.add('video-wrap');
+        el.onclick = null;
+        el.style.cursor = 'default';
     }
 
     // ─── Utils ─────────────────────────────────────────────
