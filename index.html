@@ -12,6 +12,11 @@
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="./manifest.json">
 
+    <link rel="preconnect" href="https://www.youtube-nocookie.com">
+    <link rel="preconnect" href="https://img.youtube.com">
+    <link rel="preconnect" href="https://drive.google.com">
+    <link rel="preconnect" href="https://docs.google.com">
+
     <title>メニュー案内</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -231,6 +236,8 @@
         }
 
         .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -242,7 +249,7 @@
             <span id="header-title-text">読み込み中...</span>
             <span id="offline-badge" class="offline-badge">オフライン</span>
         </div>
-        <div style="width: 40px; display: none;" id="header-spacer"></div>
+        <button id="refresh-btn" onclick="forceRefresh()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0;line-height:1;">&#8635;</button>
     </div>
 
     <div class="list-container" id="item-list">
@@ -272,34 +279,49 @@
 
     // ─── Load ────────────────────────────────────────────────
 
-    async function load() {
-        const badgeEl = document.getElementById('offline-badge');
+    const CACHE_TTL = 10 * 60 * 1000; // 10分
 
-        const cacheMap = {
-            food:   'menuFoodData',
-            drink:  'menuDrinkData',
-            manual: 'menuManualData',
-            other:  'menuOtherData',
-        };
+    const cacheMap = {
+        food:   'menuFoodData',
+        drink:  'menuDrinkData',
+        manual: 'menuManualData',
+        other:  'menuOtherData',
+    };
 
+    const sheets = [
+        { url: FOOD_URL,   key: cacheMap.food,   parse: parseFoodCSV,   set: d => foodData = d },
+        { url: DRINK_URL,  key: cacheMap.drink,  parse: parseDrinkCSV,  set: d => drinkData = d },
+        { url: MANUAL_URL, key: cacheMap.manual, parse: parseManualCSV, set: d => manualData = d },
+        { url: OTHER_URL,  key: cacheMap.other,  parse: parseOtherCSV,  set: d => otherData = d },
+    ];
+
+    async function load(force = false) {
+        const badgeEl    = document.getElementById('offline-badge');
+        const refreshBtn = document.getElementById('refresh-btn');
+
+        // キャッシュからすぐ表示
         const cached = {};
         for (const [k, key] of Object.entries(cacheMap)) cached[k] = localStorage.getItem(key);
+        const hasCached = Object.values(cached).some(v => v);
 
         if (cached.food)   foodData   = parseFoodCSV(cached.food);
         if (cached.drink)  drinkData  = parseDrinkCSV(cached.drink);
         if (cached.manual) manualData = parseManualCSV(cached.manual);
         if (cached.other)  otherData  = parseOtherCSV(cached.other);
 
-        if (Object.values(cached).some(v => v)) renderCurrent();
+        if (hasCached) renderCurrent();
+
+        // キャッシュが新鮮なら通信しない（10分以内）
+        const lastFetch = parseInt(localStorage.getItem('menuLastFetch') || '0');
+        if (!force && hasCached && Date.now() - lastFetch < CACHE_TTL) {
+            badgeEl.classList.remove('visible');
+            return;
+        }
+
+        // バックグラウンドで最新データを取得
+        if (refreshBtn) { refreshBtn.style.color = '#555'; refreshBtn.style.animation = 'spin 1s linear infinite'; }
 
         let networkError = false;
-        const sheets = [
-            { url: FOOD_URL,   key: cacheMap.food,   parse: parseFoodCSV,   set: d => foodData = d },
-            { url: DRINK_URL,  key: cacheMap.drink,  parse: parseDrinkCSV,  set: d => drinkData = d },
-            { url: MANUAL_URL, key: cacheMap.manual, parse: parseManualCSV, set: d => manualData = d },
-            { url: OTHER_URL,  key: cacheMap.other,  parse: parseOtherCSV,  set: d => otherData = d },
-        ];
-
         await Promise.all(sheets.map(s =>
             fetch(s.url + '&t=' + Date.now())
                 .then(r => { if (!r.ok) throw new Error(); return r.text(); })
@@ -310,19 +332,26 @@
                 .catch(() => { networkError = true; })
         ));
 
+        if (refreshBtn) { refreshBtn.style.color = ''; refreshBtn.style.animation = ''; }
+
         if (networkError) {
-            if (!Object.values(cached).some(v => v)) {
+            if (!hasCached) {
                 document.getElementById('item-list').innerHTML =
-                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
+                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load(true)" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
                 document.getElementById('header-title-text').textContent = 'エラー';
                 return;
             }
             badgeEl.classList.add('visible');
         } else {
+            localStorage.setItem('menuLastFetch', Date.now().toString());
             badgeEl.classList.remove('visible');
         }
 
         renderCurrent();
+    }
+
+    function forceRefresh() {
+        load(true);
     }
 
     function renderCurrent() {
@@ -404,16 +433,13 @@
 
     function setHeader(title, backFn) {
         const backBtn = document.getElementById('back-btn');
-        const spacer  = document.getElementById('header-spacer');
         const titleEl = document.getElementById('header-title-text');
         titleEl.textContent = title;
         if (backFn) {
             backBtn.classList.add('visible');
             backBtn.onclick = backFn;
-            spacer.style.display = 'block';
         } else {
             backBtn.classList.remove('visible');
-            spacer.style.display = 'none';
         }
     }
 
@@ -600,14 +626,12 @@
         const yt = u.match(/(?:youtube\.com\/watch\?[^#]*v=|youtu\.be\/)([^&\s?#]+)/);
         if (yt) {
             const id    = yt[1];
-            const embed = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
-            const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+            const embed = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
             return `
                 <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
-                    <img src="${thumb}" class="video-thumb-bg" alt="">
                     <div class="play-overlay">
                         <div class="play-circle">&#9654;</div>
-                        <div class="play-label">タップして再生</div>
+                        <div class="play-label">YouTube &#8250; タップして再生</div>
                     </div>
                 </div>`;
         }
@@ -617,13 +641,11 @@
         if (gd) {
             const id    = gd[1];
             const embed = `https://drive.google.com/file/d/${id}/preview`;
-            const thumb = `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
             return `
                 <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
-                    <img src="${thumb}" class="video-thumb-bg" alt="" onerror="this.style.display='none'">
                     <div class="play-overlay">
                         <div class="play-circle">&#9654;</div>
-                        <div class="play-label">タップして再生</div>
+                        <div class="play-label">Drive &#8250; タップして再生</div>
                     </div>
                 </div>`;
         }
