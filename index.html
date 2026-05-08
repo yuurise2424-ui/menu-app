@@ -263,7 +263,7 @@
         if (networkError) {
             if (!Object.values(cached).some(v => v)) {
                 document.getElementById('item-list').innerHTML =
-                    `<div class="status-msg">通信エラー。<br>初回uxはWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
+                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
                 document.getElementById('header-title-text').textContent = 'エラー';
                 return;
             }
