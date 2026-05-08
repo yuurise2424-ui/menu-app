@@ -76,21 +76,27 @@
         .mode-select {
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            padding: 32px 0;
+            gap: 12px;
+            padding: 24px 0;
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .mode-btn {
             background: #222;
             border: 1px solid #444;
             border-radius: 12px;
-            padding: 36px 16px;
+            padding: 28px 16px;
             color: #eee;
-            font-size: 20px;
+            font-size: 17px;
             font-weight: bold;
             cursor: pointer;
             text-align: center;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.05em;
             width: 100%;
         }
         .mode-btn:active { background: #2e2e2e; }
@@ -110,7 +116,7 @@
         }
         .item-name { font-size: 16px; font-weight: bold; flex: 1; line-height: 1.4; }
         .item-price { font-size: 15px; color: #f5a623; margin-left: 12px; white-space: nowrap; }
-        .arrow { color: #666; font-size: 18px; margin-left: 12px; }
+        .arrow { color: #666; font-size: 18px; margin-left: 12px; flex-shrink: 0; }
 
         .item-details {
             display: none;
@@ -130,6 +136,44 @@
         .field-value.alert-text { color: #ff6b6b; font-weight: bold; }
         .field-value.guide-text { color: #8bd3e6; }
         .field-value.condiment-text { color: #f9d71c; }
+
+        /* 画像・動画 */
+        .item-image {
+            width: 100%;
+            max-height: 360px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin-top: 4px;
+            display: block;
+            background: #111;
+        }
+
+        .video-wrap {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            margin-top: 4px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #111;
+        }
+        .video-embed {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+
+        .media-link {
+            display: inline-block;
+            margin-top: 6px;
+            color: #8bd3e6;
+            text-decoration: none;
+            font-size: 13px;
+            padding: 6px 14px;
+            border: 1px solid #8bd3e6;
+            border-radius: 6px;
+        }
 
         .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
     </style>
@@ -152,47 +196,74 @@
 </div>
 
 <script>
-    const SHEET_ID = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
-    const FOOD_URL  = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=フード`;
-    const DRINK_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=ドリンク`;
+    const SHEET_ID   = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
+    const BASE       = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`;
+    const FOOD_URL   = BASE + 'フード';               // フード
+    const DRINK_URL  = BASE + 'ドリンク';         // ドリンク
+    const MANUAL_URL = BASE + '接客マニュアル動画'; // 接客マニュアル動画
+    const TABLE_URL  = BASE + 'テーブルセット'; // テーブルセット
+    const OTHER_URL  = BASE + 'メニューにはないやつ'; // メニューにはないやつ
 
-    let foodData  = [];
-    let drinkData = [];
-    let currentMode = null; // null | 'food' | 'drink'
+    let foodData   = [];
+    let drinkData  = [];
+    let manualData = [];
+    let tableData  = [];
+    let otherData  = [];
+
+    let currentMode = null;
     let currentCat  = '';
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
 
+    // ─── Load ────────────────────────────────────────────────
+
     async function load() {
         const badgeEl = document.getElementById('offline-badge');
 
-        const cachedFood  = localStorage.getItem('menuFoodData');
-        const cachedDrink = localStorage.getItem('menuDrinkData');
+        const cacheMap = {
+            food:   'menuFoodData',
+            drink:  'menuDrinkData',
+            manual: 'menuManualData',
+            table:  'menuTableData',
+            other:  'menuOtherData',
+        };
 
-        if (cachedFood)  foodData  = parseFoodCSV(cachedFood);
-        if (cachedDrink) drinkData = parseDrinkCSV(cachedDrink);
-        if (cachedFood || cachedDrink) renderCurrent();
+        const cached = {};
+        for (const [k, key] of Object.entries(cacheMap)) cached[k] = localStorage.getItem(key);
+
+        if (cached.food)   foodData   = parseFoodCSV(cached.food);
+        if (cached.drink)  drinkData  = parseDrinkCSV(cached.drink);
+        if (cached.manual) manualData = parseManualCSV(cached.manual);
+        if (cached.table)  tableData  = parseTableCSV(cached.table);
+        if (cached.other)  otherData  = parseOtherCSV(cached.other);
+
+        if (Object.values(cached).some(v => v)) renderCurrent();
 
         let networkError = false;
+        const sheets = [
+            { url: FOOD_URL,   key: cacheMap.food,   parse: parseFoodCSV,   set: d => foodData = d },
+            { url: DRINK_URL,  key: cacheMap.drink,  parse: parseDrinkCSV,  set: d => drinkData = d },
+            { url: MANUAL_URL, key: cacheMap.manual, parse: parseManualCSV, set: d => manualData = d },
+            { url: TABLE_URL,  key: cacheMap.table,  parse: parseTableCSV,  set: d => tableData = d },
+            { url: OTHER_URL,  key: cacheMap.other,  parse: parseOtherCSV,  set: d => otherData = d },
+        ];
 
-        await Promise.all([
-            fetch(FOOD_URL + '&t=' + Date.now())
+        await Promise.all(sheets.map(s =>
+            fetch(s.url + '&t=' + Date.now())
                 .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-                .then(text => { localStorage.setItem('menuFoodData', text); foodData = parseFoodCSV(text); })
-                .catch(() => { networkError = true; }),
-
-            fetch(DRINK_URL + '&t=' + Date.now())
-                .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-                .then(text => { localStorage.setItem('menuDrinkData', text); drinkData = parseDrinkCSV(text); })
+                .then(text => {
+                    localStorage.setItem(s.key, text);
+                    try { s.set(s.parse(text)); } catch (e) {}
+                })
                 .catch(() => { networkError = true; })
-        ]);
+        ));
 
         if (networkError) {
-            if (!cachedFood && !cachedDrink) {
+            if (!Object.values(cached).some(v => v)) {
                 document.getElementById('item-list').innerHTML =
-                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
+                    `<div class="status-msg">通信エラー。<br>初回uxはWi-Fi環境で開いてください。<br><button onclick="load()" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
                 document.getElementById('header-title-text').textContent = 'エラー';
                 return;
             }
@@ -205,10 +276,14 @@
     }
 
     function renderCurrent() {
-        if (currentMode === null) renderTop();
-        else if (currentCat === '') renderCats(currentMode);
-        else renderItems(currentMode, currentCat);
+        if (currentMode === null)          renderTop();
+        else if (currentMode === 'manual') renderManual();
+        else if (currentMode === 'other')  renderOther();
+        else if (currentCat === '')        renderCatsFor(currentMode);
+        else                               renderItemsFor(currentMode, currentCat);
     }
+
+    // ─── Parsers ─────────────────────────────────────────────
 
     function parseFoodCSV(text) {
         const rows = parseCSV(text);
@@ -216,10 +291,10 @@
         return rows.slice(1).map(r => {
             if (r[0]) lastCat = r[0];
             return {
-                cat: lastCat, name: r[1] || '', price: r[2] || '',
-                amount: r[3] || '', fat: r[4] || '', parts: r[5] || '',
-                desc: r[6] || '', guide: r[7] || '', condiment: r[8] || '',
-                note: r[9] || '', allergy: r[10] || '',
+                cat: lastCat, name: r[1]||'', price: r[2]||'',
+                amount: r[3]||'', fat: r[4]||'', parts: r[5]||'',
+                desc: r[6]||'', guide: r[7]||'', condiment: r[8]||'',
+                note: r[9]||'', allergy: r[10]||'', image: r[11]||'',
             };
         }).filter(r => r.name);
     }
@@ -230,10 +305,36 @@
         return rows.slice(1).map(r => {
             if (r[0]) lastCat = r[0];
             return {
-                cat: lastCat, name: r[1] || '',
-                glass: r[2] || '', amount: r[3] || '', note: r[4] || '',
+                cat: lastCat, name: r[1]||'',
+                glass: r[2]||'', amount: r[3]||'', note: r[4]||'', image: r[5]||'',
             };
         }).filter(r => r.name);
+    }
+
+    function parseManualCSV(text) {
+        // A=タイトル, B=動画URL, C=メモ
+        const rows = parseCSV(text);
+        return rows.slice(1).map(r => ({
+            title: r[0]||'', url: r[1]||'', note: r[2]||'',
+        })).filter(r => r.title);
+    }
+
+    function parseTableCSV(text) {
+        // A=カテゴリ(結合可), B=品名, C=説明, D=画像
+        const rows = parseCSV(text);
+        let lastCat = '';
+        return rows.slice(1).map(r => {
+            if (r[0]) lastCat = r[0];
+            return { cat: lastCat, name: r[1]||'', desc: r[2]||'', image: r[3]||'' };
+        }).filter(r => r.name);
+    }
+
+    function parseOtherCSV(text) {
+        // A=メニュー, B=値段
+        const rows = parseCSV(text);
+        return rows.slice(1).map(r => ({
+            name: r[0]||'', price: r[1]||'',
+        })).filter(r => r.name);
     }
 
     function parseCSV(text) {
@@ -257,10 +358,12 @@
         return rows;
     }
 
+    // ─── Header ─────────────────────────────────────────────
+
     function setHeader(title, backFn) {
-        const backBtn  = document.getElementById('back-btn');
-        const spacer   = document.getElementById('header-spacer');
-        const titleEl  = document.getElementById('header-title-text');
+        const backBtn = document.getElementById('back-btn');
+        const spacer  = document.getElementById('header-spacer');
+        const titleEl = document.getElementById('header-title-text');
         titleEl.textContent = title;
         if (backFn) {
             backBtn.classList.add('visible');
@@ -272,24 +375,98 @@
         }
     }
 
+    // ─── Top screen ─────────────────────────────────────────
+
     function renderTop() {
         currentMode = null;
         currentCat  = '';
         setHeader('メニュー案内', null);
         document.getElementById('item-list').innerHTML = `
             <div class="mode-select">
-                <button class="mode-btn" onclick="renderCats('food')">フード</button>
-                <button class="mode-btn" onclick="renderCats('drink')">ドリンク</button>
+                <div class="mode-grid">
+                    <button class="mode-btn" onclick="renderCatsFor('food')">フード</button>
+                    <button class="mode-btn" onclick="renderCatsFor('drink')">ドリンク</button>
+                </div>
+                <button class="mode-btn" onclick="renderManual()">接客マニュアル動画</button>
+                <button class="mode-btn" onclick="renderCatsFor('table')">テーブルセット</button>
+                <button class="mode-btn" onclick="renderOther()">メニューにはないやつ</button>
             </div>
         `;
     }
 
-    function renderCats(mode) {
+    // ─── 接客マニュアル動画（フラットリスト）───────────────
+
+    function renderManual() {
+        currentMode = 'manual';
+        currentCat  = '';
+        setHeader('接客マニュアル動画', renderTop);
+
+        if (manualData.length === 0) {
+            document.getElementById('item-list').innerHTML = `<div class="status-msg">データがありません</div>`;
+            return;
+        }
+
+        const listEl = document.getElementById('item-list');
+        listEl.innerHTML = manualData.map(item => {
+            const media = renderMedia(item.url);
+            const hasDetails = !!(media || item.note);
+            const detailsHtml = hasDetails ? `
+                <div class="item-details">
+                    ${media ? `<div class="field">${media}</div>` : ''}
+                    ${item.note ? `<div class="field"><div class="field-label">メモ</div><div class="field-value guide-text">${esc(item.note).replace(/\n/g,'<br>')}</div></div>` : ''}
+                </div>` : '';
+            return `
+                <div class="list-item" onclick="if(this.querySelector('.item-details'))this.classList.toggle('open')">
+                    <div class="item-header">
+                        <div class="item-name">${esc(item.title)}</div>
+                        ${hasDetails ? '<div class="arrow">&#8250;</div>' : ''}
+                    </div>
+                    ${detailsHtml}
+                </div>`;
+        }).join('');
+        listEl.scrollTop = 0;
+    }
+
+    // ─── メニューにはないやつ（フラットリスト）──────────────
+
+    function renderOther() {
+        currentMode = 'other';
+        currentCat  = '';
+        setHeader('メニューにはないやつ', renderTop);
+
+        if (otherData.length === 0) {
+            document.getElementById('item-list').innerHTML = `<div class="status-msg">データがありません</div>`;
+            return;
+        }
+
+        const listEl = document.getElementById('item-list');
+        listEl.innerHTML = otherData.map(item => `
+            <div class="list-item">
+                <div class="item-header">
+                    <div class="item-name">${esc(item.name)}</div>
+                    ${item.price ? `<div class="item-price">${esc(item.price)}</div>` : ''}
+                </div>
+            </div>`
+        ).join('');
+        listEl.scrollTop = 0;
+    }
+
+    // ─── カテゴリ → アイテム（フード/ドリンク/テーブルセット）
+
+    function getModeLabel(mode) {
+        return { food: 'フード', drink: 'ドリンク', table: 'テーブルセット' }[mode] || mode;
+    }
+
+    function getDataFor(mode) {
+        return { food: foodData, drink: drinkData, table: tableData }[mode] || [];
+    }
+
+    function renderCatsFor(mode) {
         currentMode = mode;
         currentCat  = '';
-        setHeader(mode === 'food' ? 'フード' : 'ドリンク', renderTop);
+        setHeader(getModeLabel(mode), renderTop);
 
-        const data = mode === 'food' ? foodData : drinkData;
+        const data = getDataFor(mode);
         const seen = new Set();
         const cats = data.map(r => r.cat).filter(c => c && !seen.has(c) && seen.add(c));
 
@@ -298,56 +475,77 @@
             return;
         }
 
-        document.getElementById('item-list').innerHTML = cats.map(cat => `
-            <div class="list-item" onclick="renderItems('${mode}','${esc(cat)}')">
+        window._cats = cats;
+
+        document.getElementById('item-list').innerHTML = cats.map((cat, i) => `
+            <div class="list-item" onclick="renderItemsFor('${mode}',${i})">
                 <div class="item-header">
                     <div class="item-name">${esc(cat)}</div>
-                    <div class="arrow">›</div>
+                    <div class="arrow">&#8250;</div>
                 </div>
             </div>
         `).join('');
         document.getElementById('item-list').scrollTop = 0;
     }
 
-    function renderItems(mode, cat) {
+    function renderItemsFor(mode, catIdx) {
+        const cat = (window._cats || [])[catIdx];
+        if (cat === undefined) return;
         currentCat = cat;
-        setHeader(cat, () => renderCats(mode));
 
-        const data  = mode === 'food' ? foodData : drinkData;
+        const data  = getDataFor(mode);
         const items = data.filter(r => r.cat === cat);
+
+        setHeader(cat, () => renderCatsFor(mode));
+
         const listEl = document.getElementById('item-list');
 
         listEl.innerHTML = items.map(item => {
-            const fields = mode === 'food'
-                ? [
-                    { label: '枚数/グラム',   val: item.amount,    cls: '' },
-                    { label: '脂の量',         val: item.fat,       cls: '' },
-                    { label: '材料/部位',       val: item.parts,     cls: '' },
-                    { label: '説明',            val: item.desc,      cls: '' },
-                    { label: '接客時の説明',    val: item.guide,     cls: 'guide-text' },
-                    { label: '付けるもの',      val: item.condiment, cls: 'condiment-text' },
-                    { label: '注意点',          val: item.note,      cls: 'alert-text' },
-                    { label: 'アレルギー',      val: item.allergy,   cls: 'alert-text' },
-                ]
-                : [
-                    { label: 'グラスの種類',   val: item.glass,  cls: '' },
-                    { label: '分量詳細',        val: item.amount, cls: 'guide-text' },
-                    { label: 'その他',          val: item.note,   cls: 'alert-text' },
-                ];
+            let fields = [];
 
-            const detailsHtml = fields.filter(d => d.val).length > 0
-                ? `<div class="item-details">${fields.filter(d => d.val).map(d => `
-                    <div class="field">
-                        <div class="field-label">${esc(d.label)}</div>
-                        <div class="field-value ${d.cls}">${esc(d.val).replace(/\n/g,'<br>')}</div>
-                    </div>`).join('')}</div>`
-                : '';
+            if (mode === 'food') {
+                fields = [
+                    { label: '枚数/グラム', val: item.amount,    cls: '' },
+                    { label: '脂の量',               val: item.fat,       cls: '' },
+                    { label: '材料/部位',        val: item.parts,     cls: '' },
+                    { label: '説明',                     val: item.desc,      cls: '' },
+                    { label: '接客時の説明', val: item.guide, cls: 'guide-text' },
+                    { label: '付けるもの',   val: item.condiment, cls: 'condiment-text' },
+                    { label: '注意点',               val: item.note,      cls: 'alert-text' },
+                    { label: 'アレルギー',   val: item.allergy,   cls: 'alert-text' },
+                ];
+            } else if (mode === 'drink') {
+                fields = [
+                    { label: 'グラスの種類', val: item.glass,  cls: '' },
+                    { label: '分量詳細',              val: item.amount, cls: 'guide-text' },
+                    { label: 'その他',                    val: item.note,   cls: 'alert-text' },
+                ];
+            } else if (mode === 'table') {
+                fields = [
+                    { label: '説明', val: item.desc, cls: '' },
+                ];
+            }
+
+            const visFields  = fields.filter(d => d.val);
+            const media      = item.image ? renderMedia(item.image) : '';
+            const hasDetails = visFields.length > 0 || !!media;
+
+            const detailsHtml = hasDetails ? `
+                <div class="item-details">
+                    ${visFields.map(d => `
+                        <div class="field">
+                            <div class="field-label">${esc(d.label)}</div>
+                            <div class="field-value ${d.cls}">${esc(d.val).replace(/\n/g,'<br>')}</div>
+                        </div>`).join('')}
+                    ${media ? `<div class="field"><div class="field-label">画像</div>${media}</div>` : ''}
+                </div>` : '';
 
             return `
                 <div class="list-item" onclick="if(this.querySelector('.item-details'))this.classList.toggle('open')">
                     <div class="item-header">
                         <div class="item-name">${esc(item.name)}</div>
                         ${item.price ? `<div class="item-price">${esc(item.price)}</div>` : ''}
+                        ${hasDetails ? '<div class="arrow">&#8250;</div>' : ''}
                     </div>
                     ${detailsHtml}
                 </div>`;
@@ -355,6 +553,35 @@
 
         listEl.scrollTop = 0;
     }
+
+    // ─── Media ─────────────────────────────────────────────
+
+    function renderMedia(url) {
+        if (!url) return '';
+        const u = url.trim();
+
+        // YouTube
+        const yt = u.match(/(?:youtube\.com\/watch\?[^#]*v=|youtu\.be\/)([^&\s?#]+)/);
+        if (yt) {
+            return `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${yt[1]}" class="video-embed" allowfullscreen loading="lazy"></iframe></div>`;
+        }
+
+        // Google Drive
+        const gd = u.match(/drive\.google\.com\/file\/d\/([^/?#]+)/);
+        if (gd) {
+            return `<img src="https://drive.google.com/thumbnail?id=${gd[1]}&sz=w800" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
+        }
+
+        // Direct image URL
+        if (/\.(jpe?g|png|gif|webp|avif|bmp|svg)([?#]|$)/i.test(u)) {
+            return `<img src="${esc(u)}" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
+        }
+
+        // Other: show as link
+        return `<a href="${esc(u)}" target="_blank" rel="noopener" class="media-link">&#8599; リンクを開く</a>`;
+    }
+
+    // ─── Utils ─────────────────────────────────────────────
 
     function esc(s) {
         return String(s ?? '')
