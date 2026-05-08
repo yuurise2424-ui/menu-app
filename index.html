@@ -198,16 +198,14 @@
 <script>
     const SHEET_ID   = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
     const BASE       = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`;
-    const FOOD_URL   = BASE + 'フード';               // フード
-    const DRINK_URL  = BASE + 'ドリンク';         // ドリンク
-    const MANUAL_URL = BASE + '接客マニュアル動画'; // 接客マニュアル動画
-    const TABLE_URL  = BASE + 'テーブルセット'; // テーブルセット
-    const OTHER_URL  = BASE + 'メニューにはないやつ'; // メニューにはないやつ
+    const FOOD_URL   = BASE + 'フード';
+    const DRINK_URL  = BASE + 'ドリンク';
+    const MANUAL_URL = BASE + '接客マニュアル動画、テーブルセット';
+    const OTHER_URL  = BASE + 'メニューにはないやつ';
 
     let foodData   = [];
     let drinkData  = [];
     let manualData = [];
-    let tableData  = [];
     let otherData  = [];
 
     let currentMode = null;
@@ -226,7 +224,6 @@
             food:   'menuFoodData',
             drink:  'menuDrinkData',
             manual: 'menuManualData',
-            table:  'menuTableData',
             other:  'menuOtherData',
         };
 
@@ -236,7 +233,6 @@
         if (cached.food)   foodData   = parseFoodCSV(cached.food);
         if (cached.drink)  drinkData  = parseDrinkCSV(cached.drink);
         if (cached.manual) manualData = parseManualCSV(cached.manual);
-        if (cached.table)  tableData  = parseTableCSV(cached.table);
         if (cached.other)  otherData  = parseOtherCSV(cached.other);
 
         if (Object.values(cached).some(v => v)) renderCurrent();
@@ -246,7 +242,6 @@
             { url: FOOD_URL,   key: cacheMap.food,   parse: parseFoodCSV,   set: d => foodData = d },
             { url: DRINK_URL,  key: cacheMap.drink,  parse: parseDrinkCSV,  set: d => drinkData = d },
             { url: MANUAL_URL, key: cacheMap.manual, parse: parseManualCSV, set: d => manualData = d },
-            { url: TABLE_URL,  key: cacheMap.table,  parse: parseTableCSV,  set: d => tableData = d },
             { url: OTHER_URL,  key: cacheMap.other,  parse: parseOtherCSV,  set: d => otherData = d },
         ];
 
@@ -283,6 +278,8 @@
         else                               renderItemsFor(currentMode, currentCat);
     }
 
+
+
     // ─── Parsers ─────────────────────────────────────────────
 
     function parseFoodCSV(text) {
@@ -312,21 +309,11 @@
     }
 
     function parseManualCSV(text) {
-        // A=タイトル, B=動画URL, C=メモ
+        // A=カテゴリ(項目名), B=動画・画像URL
         const rows = parseCSV(text);
         return rows.slice(1).map(r => ({
-            title: r[0]||'', url: r[1]||'', note: r[2]||'',
+            title: r[0]||'', url: r[1]||'',
         })).filter(r => r.title);
-    }
-
-    function parseTableCSV(text) {
-        // A=カテゴリ(結合可), B=品名, C=説明, D=画像
-        const rows = parseCSV(text);
-        let lastCat = '';
-        return rows.slice(1).map(r => {
-            if (r[0]) lastCat = r[0];
-            return { cat: lastCat, name: r[1]||'', desc: r[2]||'', image: r[3]||'' };
-        }).filter(r => r.name);
     }
 
     function parseOtherCSV(text) {
@@ -387,8 +374,7 @@
                     <button class="mode-btn" onclick="renderCatsFor('food')">フード</button>
                     <button class="mode-btn" onclick="renderCatsFor('drink')">ドリンク</button>
                 </div>
-                <button class="mode-btn" onclick="renderManual()">接客マニュアル動画</button>
-                <button class="mode-btn" onclick="renderCatsFor('table')">テーブルセット</button>
+                <button class="mode-btn" onclick="renderManual()">接客マニュアル動画・テーブルセット</button>
                 <button class="mode-btn" onclick="renderOther()">メニューにはないやつ</button>
             </div>
         `;
@@ -399,7 +385,7 @@
     function renderManual() {
         currentMode = 'manual';
         currentCat  = '';
-        setHeader('接客マニュアル動画', renderTop);
+        setHeader('接客マニュアル動画・テーブルセット', renderTop);
 
         if (manualData.length === 0) {
             document.getElementById('item-list').innerHTML = `<div class="status-msg">データがありません</div>`;
@@ -413,7 +399,6 @@
             const detailsHtml = hasDetails ? `
                 <div class="item-details">
                     ${media ? `<div class="field">${media}</div>` : ''}
-                    ${item.note ? `<div class="field"><div class="field-label">メモ</div><div class="field-value guide-text">${esc(item.note).replace(/\n/g,'<br>')}</div></div>` : ''}
                 </div>` : '';
             return `
                 <div class="list-item" onclick="if(this.querySelector('.item-details'))this.classList.toggle('open')">
@@ -454,11 +439,11 @@
     // ─── カテゴリ → アイテム（フード/ドリンク/テーブルセット）
 
     function getModeLabel(mode) {
-        return { food: 'フード', drink: 'ドリンク', table: 'テーブルセット' }[mode] || mode;
+        return { food: 'フード', drink: 'ドリンク' }[mode] || mode;
     }
 
     function getDataFor(mode) {
-        return { food: foodData, drink: drinkData, table: tableData }[mode] || [];
+        return { food: foodData, drink: drinkData }[mode] || [];
     }
 
     function renderCatsFor(mode) {
@@ -519,10 +504,6 @@
                     { label: 'グラスの種類', val: item.glass,  cls: '' },
                     { label: '分量詳細',              val: item.amount, cls: 'guide-text' },
                     { label: 'その他',                    val: item.note,   cls: 'alert-text' },
-                ];
-            } else if (mode === 'table') {
-                fields = [
-                    { label: '説明', val: item.desc, cls: '' },
                 ];
             }
 
