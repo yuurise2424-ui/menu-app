@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-v2';
+const CACHE_NAME = 'menu-v3';
 const PRECACHE = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
