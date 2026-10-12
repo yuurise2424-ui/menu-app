@@ -3,8 +3,8 @@
   "short_name": "メニュー",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#141414",
+  "background_color": "#1A120D",
+  "theme_color": "#1A120D",
   "icons": [
     {
       "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSI4MiIgZm9udC1zaXplPSI2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2ZmZmZmZiI+5p2OPC90ZXh0Pjx0ZXh0IHg9Ijk2IiB5PSIxNTAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPuaYhzwvdGV4dD48L3N2Zz4=",

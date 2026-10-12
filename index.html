@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="メニュー案内">
+    <meta name="theme-color" content="#1A120D">
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzE0MTQxNCIvPjx0ZXh0IHg9Ijk2IiB5PSI4MiIgZm9udC1zaXplPSI2MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2ZmZmZmZiI+5p2OPC90ZXh0Pjx0ZXh0IHg9Ijk2IiB5PSIxNTAiIGZvbnQtc2l6ZT0iNjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNmZmZmZmYiPuaYhzwvdGV4dD48L3N2Zz4=">
 
     <meta name="mobile-web-app-capable" content="yes">
@@ -19,242 +20,337 @@
 
     <title>メニュー案内</title>
     <style>
+        /* ─── Material 3 カラートークン（ダーク） ─── */
+        :root {
+            --md-primary: #FFB68B;
+            --md-on-primary: #522300;
+            --md-primary-container: #723600;
+            --md-on-primary-container: #FFDBC8;
+            --md-secondary: #E5BFA8;
+            --md-secondary-container: #5B4130;
+            --md-on-secondary-container: #FFDBC8;
+            --md-tertiary: #C9CA93;
+            --md-tertiary-container: #484920;
+            --md-on-tertiary-container: #E5E6AD;
+            --md-error: #FFB4AB;
+            --md-error-container: #93000A;
+            --md-on-error-container: #FFDAD6;
+            --md-surface: #1A120D;
+            --md-on-surface: #F0DFD7;
+            --md-on-surface-variant: #D7C2B8;
+            --md-outline: #A08D84;
+            --md-outline-variant: #52443C;
+            --md-surface-container-lowest: #140D08;
+            --md-surface-container-low: #221A15;
+            --md-surface-container: #271E19;
+            --md-surface-container-high: #322823;
+            --md-surface-container-highest: #3D332D;
+
+            --md-shape-s: 8px;
+            --md-shape-m: 12px;
+            --md-shape-l: 16px;
+            --md-shape-xl: 28px;
+            --md-ease: cubic-bezier(0.2, 0, 0, 1);
+        }
+
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
         html, body {
             height: 100%;
-            background: #000;
-            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', sans-serif;
+            background: var(--md-surface);
+            font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Roboto, sans-serif;
             overflow: hidden;
             overscroll-behavior-y: none;
+            color: var(--md-on-surface);
         }
+
+        button { font: inherit; color: inherit; }
+
+        svg.icon { width: 24px; height: 24px; fill: currentColor; flex-shrink: 0; display: block; }
+
+        /* ステートレイヤー（押したときの薄い反応） */
+        .state { position: relative; overflow: hidden; cursor: pointer; }
+        .state::after {
+            content: ''; position: absolute; inset: 0;
+            background: currentColor; opacity: 0;
+            transition: opacity 150ms var(--md-ease);
+            pointer-events: none;
+        }
+        .state:active::after { opacity: 0.12; }
 
         #app {
             height: 100dvh;
             display: flex;
             flex-direction: column;
-            background: #141414;
-            color: #eee;
+            background: var(--md-surface);
             width: 100%;
+            max-width: 720px;
+            margin: 0 auto;
         }
 
-        .header {
-            padding: 12px 16px;
-            padding-top: calc(12px + env(safe-area-inset-top));
-            border-bottom: 1px solid #333;
-            background: #0a0a0a;
-            flex-shrink: 0;
+        /* ─── Top app bar ─── */
+        .top-bar {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 4px;
+            min-height: 64px;
+            padding: 8px 4px;
+            padding-top: calc(8px + env(safe-area-inset-top));
+            background: var(--md-surface);
+            flex-shrink: 0;
+            transition: background 200ms var(--md-ease);
         }
+        .top-bar.scrolled { background: var(--md-surface-container); }
 
-        .back-btn {
-            background: none; border: none; color: #aaa;
-            font-size: 24px; cursor: pointer;
-            padding: 0 8px; display: none; line-height: 1;
+        .icon-btn {
+            width: 48px; height: 48px;
+            border: none; background: none;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: var(--md-on-surface-variant);
+            flex-shrink: 0;
         }
-        .back-btn.visible { display: block; }
+        .icon-btn.hidden { display: none; }
+        #back-btn.hidden + .top-title { padding-left: 12px; }
+        .icon-btn.spinning svg { animation: spin 1s linear infinite; }
 
-        .header-title {
-            flex: 1; font-size: 16px; font-weight: bold;
+        .top-title {
+            flex: 1;
+            font-size: 22px;
+            line-height: 28px;
+            font-weight: 400;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            text-align: center;
+            padding: 0 4px;
+            display: flex; align-items: center; gap: 8px;
         }
+        .top-title span:first-child { overflow: hidden; text-overflow: ellipsis; }
 
-        .offline-badge {
-            font-size: 10px; background: #e74c3c; color: #fff;
-            padding: 2px 6px; border-radius: 4px; display: none;
-            margin-left: 8px; font-weight: normal;
+        .offline-chip {
+            font-size: 11px; font-weight: 500; letter-spacing: 0.05em;
+            background: var(--md-error-container);
+            color: var(--md-on-error-container);
+            padding: 2px 8px; border-radius: var(--md-shape-s);
+            display: none; flex-shrink: 0;
         }
-        .offline-badge.visible { display: inline-block; }
+        .offline-chip.visible { display: inline-block; }
 
-        .list-container {
+        /* ─── コンテンツ ─── */
+        .content {
             flex: 1;
             overflow-y: auto;
-            padding: 0 16px;
-            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+            padding: 4px 16px 24px;
             overscroll-behavior: contain;
         }
 
-        /* トップ選択画面 */
-        .mode-select {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            padding: 24px 0;
+        .section-label {
+            font-size: 14px; font-weight: 500; letter-spacing: 0.01em;
+            color: var(--md-primary);
+            padding: 16px 4px 8px;
         }
 
-        .mode-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
+        /* M3 list（カテゴリ一覧） */
+        .list {
+            background: var(--md-surface-container-low);
+            border-radius: var(--md-shape-l);
+            overflow: hidden;
         }
-
-        .mode-btn {
-            background: #222;
-            border: 1px solid #444;
-            border-radius: 12px;
-            padding: 28px 16px;
-            color: #eee;
-            font-size: 17px;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            letter-spacing: 0.05em;
-            width: 100%;
+        .list-row {
+            display: flex; align-items: center; gap: 16px;
+            min-height: 56px;
+            padding: 8px 16px 8px 16px;
+            border: none; background: none; width: 100%; text-align: left;
         }
-        .mode-btn:active { background: #2e2e2e; }
-
-        /* リスト */
-        .list-item {
-            border-bottom: 1px solid #333;
-            padding: 16px 0;
-            cursor: pointer;
+        .list-row + .list-row { border-top: 1px solid var(--md-outline-variant); }
+        .list-row .lead {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--md-primary-container);
+            color: var(--md-on-primary-container);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; font-weight: 500; flex-shrink: 0;
         }
-        .list-item:last-child { border-bottom: none; }
+        .list-row .text { flex: 1; min-width: 0; }
+        .list-row .headline { font-size: 16px; line-height: 24px; color: var(--md-on-surface); }
+        .list-row .supporting { font-size: 14px; line-height: 20px; color: var(--md-on-surface-variant); }
+        .list-row .trail { color: var(--md-on-surface-variant); font-size: 14px; white-space: nowrap; }
+        .list-row .price { color: var(--md-primary); font-size: 14px; font-weight: 500; white-space: nowrap; }
 
-        .item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* 商品カード（タップで開閉） */
+        .cards { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+        .card {
+            background: var(--md-surface-container-low);
+            border-radius: var(--md-shape-m);
+            transition: background 200ms var(--md-ease);
         }
-        .item-name { font-size: 16px; font-weight: bold; flex: 1; line-height: 1.4; }
-        .item-price { font-size: 15px; color: #f5a623; margin-left: 12px; white-space: nowrap; }
-        .arrow { color: #666; font-size: 18px; margin-left: 12px; flex-shrink: 0; }
-
-        .item-details {
-            display: none;
-            margin-top: 12px;
-            padding: 12px;
-            background: #222;
-            border-radius: 8px;
-            font-size: 14px;
+        .card.open { background: var(--md-surface-container); }
+        .card-head {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px;
+            border-radius: var(--md-shape-m);
         }
-        .list-item.open .item-details { display: block; }
+        .card-name { flex: 1; font-size: 16px; line-height: 24px; font-weight: 500; min-width: 0; }
+        .price-chip {
+            font-size: 14px; font-weight: 500;
+            color: var(--md-on-secondary-container);
+            background: var(--md-secondary-container);
+            border-radius: var(--md-shape-s);
+            padding: 4px 10px; white-space: nowrap; flex-shrink: 0;
+        }
+        .expand-icon { color: var(--md-on-surface-variant); transition: transform 250ms var(--md-ease); }
+        .card.open .expand-icon { transform: rotate(180deg); }
 
-        .field { margin-bottom: 10px; }
-        .field:last-child { margin-bottom: 0; }
-        .field-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-        .field-value { color: #ddd; line-height: 1.5; }
+        .card-body { display: none; padding: 0 16px 16px; }
+        .card.open .card-body { display: block; animation: fade 200ms var(--md-ease); }
 
-        .field-value.alert-text { color: #ff6b6b; font-weight: bold; }
-        .field-value.guide-text { color: #8bd3e6; }
-        .field-value.condiment-text { color: #f9d71c; }
+        .field { padding: 10px 0; border-top: 1px solid var(--md-outline-variant); }
+        .field:first-child { border-top: none; padding-top: 0; }
+        .field-label {
+            font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em;
+            color: var(--md-on-surface-variant); margin-bottom: 4px;
+        }
+        .field-value { font-size: 14px; line-height: 22px; color: var(--md-on-surface); }
+
+        /* 強調フィールド（接客説明・付けるもの・注意点） */
+        .callout {
+            border-radius: var(--md-shape-m);
+            padding: 12px; margin: 6px 0;
+            border-top: none;
+        }
+        .callout .field-label { color: inherit; opacity: 0.85; }
+        .callout .field-value { color: inherit; }
+        .callout.guide     { background: var(--md-tertiary-container);  color: var(--md-on-tertiary-container); }
+        .callout.condiment { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+        .callout.alert     { background: var(--md-error-container);     color: var(--md-on-error-container); }
+        .callout.alert .field-value { font-weight: 700; }
+        .callout + .field:not(.callout) { border-top: none; }
 
         /* 画像・動画 */
         .item-image {
-            width: 100%;
-            max-height: 360px;
-            object-fit: contain;
-            border-radius: 8px;
-            margin-top: 4px;
-            display: block;
-            background: #111;
+            width: 100%; max-height: 360px; object-fit: contain;
+            border-radius: var(--md-shape-m);
+            display: block; background: var(--md-surface-container-lowest);
         }
-
-        /* 動画サムネイル（タップ前） */
-        .video-thumb {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%;
-            margin-top: 4px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #0e0e0e;
-            cursor: pointer;
-            border: 1px solid #333;
+        .video-thumb, .video-wrap {
+            position: relative; width: 100%; padding-top: 56.25%;
+            border-radius: var(--md-shape-m); overflow: hidden;
+            background: var(--md-surface-container-lowest);
         }
-        .video-thumb-bg {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: cover;
-            opacity: 0.65;
-        }
+        .video-thumb { cursor: pointer; }
         .play-overlay {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
+            position: absolute; inset: 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
             pointer-events: none;
         }
-        .play-circle {
-            width: 60px; height: 60px;
-            background: rgba(255,255,255,0.93);
-            border-radius: 50%;
+        .play-fab {
+            width: 56px; height: 56px; border-radius: var(--md-shape-l);
+            background: var(--md-primary-container); color: var(--md-on-primary-container);
             display: flex; align-items: center; justify-content: center;
-            font-size: 24px; color: #111;
-            padding-left: 4px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.6);
+            box-shadow: 0 1px 3px rgba(0,0,0,.3), 0 4px 8px 3px rgba(0,0,0,.15);
         }
-        .play-label {
-            color: #fff;
-            font-size: 12px;
-            font-weight: bold;
-            text-shadow: 0 1px 4px rgba(0,0,0,0.9);
-            letter-spacing: 0.05em;
-        }
-        /* 動画iframe（タップ後） */
-        .video-wrap {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%;
-            margin-top: 4px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #000;
-        }
-        .video-embed {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            border: none;
-        }
-        /* HTML5 video */
+        .play-label { font-size: 12px; font-weight: 500; color: var(--md-on-surface-variant); letter-spacing: 0.05em; }
+        .video-embed { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
         .item-video {
-            width: 100%;
-            border-radius: 8px;
-            margin-top: 4px;
-            display: block;
-            background: #000;
-            max-height: 400px;
+            width: 100%; max-height: 400px; display: block;
+            border-radius: var(--md-shape-m); background: #000;
         }
 
-        .media-link {
-            display: inline-block;
-            margin-top: 6px;
-            color: #8bd3e6;
-            text-decoration: none;
-            font-size: 13px;
-            padding: 6px 14px;
-            border: 1px solid #8bd3e6;
-            border-radius: 6px;
+        .text-btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            height: 40px; padding: 0 16px 0 12px;
+            border-radius: 20px;
+            border: 1px solid var(--md-outline);
+            color: var(--md-primary);
+            font-size: 14px; font-weight: 500; text-decoration: none;
+        }
+        .text-btn svg { width: 18px; height: 18px; }
+
+        .filled-btn {
+            height: 40px; padding: 0 24px; border-radius: 20px; border: none;
+            background: var(--md-primary); color: var(--md-on-primary);
+            font-size: 14px; font-weight: 500; margin-top: 16px;
         }
 
-        .status-msg { padding: 30px 20px; text-align: center; font-size: 15px; color: #888; }
+        .status-msg {
+            padding: 48px 24px; text-align: center;
+            font-size: 14px; line-height: 22px; color: var(--md-on-surface-variant);
+        }
+
+        /* ─── Navigation bar ─── */
+        .nav-bar {
+            display: flex;
+            background: var(--md-surface-container);
+            padding-bottom: env(safe-area-inset-bottom);
+            flex-shrink: 0;
+        }
+        .nav-item {
+            flex: 1;
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 12px 0 16px;
+            border: none; background: none;
+            color: var(--md-on-surface-variant);
+            cursor: pointer;
+        }
+        .nav-indicator {
+            width: 64px; height: 32px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+            transition: background 200ms var(--md-ease);
+        }
+        .nav-indicator::after {
+            content: ''; position: absolute; inset: 0;
+            background: currentColor; opacity: 0;
+            transition: opacity 150ms var(--md-ease);
+        }
+        .nav-item:active .nav-indicator::after { opacity: 0.12; }
+        .nav-label { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.04em; }
+        .nav-item.active { color: var(--md-on-surface); }
+        .nav-item.active .nav-indicator {
+            background: var(--md-secondary-container);
+            color: var(--md-on-secondary-container);
+        }
+        .nav-item.active .nav-label { font-weight: 700; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <div class="header">
-        <button class="back-btn" id="back-btn">‹</button>
-        <div class="header-title">
+    <header class="top-bar" id="top-bar">
+        <button class="icon-btn state hidden" id="back-btn" aria-label="戻る">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        </button>
+        <div class="top-title">
             <span id="header-title-text">読み込み中...</span>
-            <span id="offline-badge" class="offline-badge">オフライン</span>
+            <span id="offline-badge" class="offline-chip">オフライン</span>
         </div>
-        <button id="refresh-btn" onclick="forceRefresh()" style="background:none;border:none;color:#666;font-size:18px;cursor:pointer;padding:0 4px;flex-shrink:0;line-height:1;">&#8635;</button>
-    </div>
+        <button class="icon-btn state" id="refresh-btn" onclick="forceRefresh()" aria-label="更新">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+        </button>
+    </header>
 
-    <div class="list-container" id="item-list">
+    <main class="content" id="item-list">
         <div class="status-msg">データを準備しています...</div>
-    </div>
+    </main>
+
+    <nav class="nav-bar" id="nav-bar">
+        <button class="nav-item" data-mode="food" onclick="goTab('food')">
+            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg></span>
+            <span class="nav-label">フード</span>
+        </button>
+        <button class="nav-item" data-mode="drink" onclick="goTab('drink')">
+            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7L5.66 5h12.69l-1.78 2H7.43z"/></svg></span>
+            <span class="nav-label">ドリンク</span>
+        </button>
+        <button class="nav-item" data-mode="manual" onclick="goTab('manual')">
+            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span>
+            <span class="nav-label">マニュアル</span>
+        </button>
+        <button class="nav-item" data-mode="other" onclick="goTab('other')">
+            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></span>
+            <span class="nav-label">その他</span>
+        </button>
+    </nav>
 </div>
 
 <script>
@@ -270,12 +366,26 @@
     let manualData = [];
     let otherData  = [];
 
-    let currentMode = null;
+    let currentMode = 'food';
     let currentCat  = '';
+
+    try {
+        const savedTab = localStorage.getItem('menuLastTab');
+        if (['food','drink','manual','other'].includes(savedTab)) currentMode = savedTab;
+    } catch (e) {}
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
+
+    // ─── Icons ───────────────────────────────────────────────
+
+    const ICON = {
+        expand:  '<svg class="icon expand-icon" viewBox="0 0 24 24"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>',
+        chevron: '<svg class="icon" viewBox="0 0 24 24" style="color:var(--md-on-surface-variant)"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>',
+        play:    '<svg class="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+        open:    '<svg class="icon" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>',
+    };
 
     // ─── Load ────────────────────────────────────────────────
 
@@ -319,7 +429,7 @@
         }
 
         // バックグラウンドで最新データを取得
-        if (refreshBtn) { refreshBtn.style.color = '#555'; refreshBtn.style.animation = 'spin 1s linear infinite'; }
+        if (refreshBtn) refreshBtn.classList.add('spinning');
 
         let networkError = false;
         await Promise.all(sheets.map(s =>
@@ -332,12 +442,12 @@
                 .catch(() => { networkError = true; })
         ));
 
-        if (refreshBtn) { refreshBtn.style.color = ''; refreshBtn.style.animation = ''; }
+        if (refreshBtn) refreshBtn.classList.remove('spinning');
 
         if (networkError) {
             if (!hasCached) {
                 document.getElementById('item-list').innerHTML =
-                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button onclick="load(true)" style="margin-top:15px;padding:8px 16px;border-radius:6px;border:none;background:#555;color:#fff;">再試行</button></div>`;
+                    `<div class="status-msg">通信エラー。<br>初回はWi-Fi環境で開いてください。<br><button class="filled-btn state" onclick="load(true)">再試行</button></div>`;
                 document.getElementById('header-title-text').textContent = 'エラー';
                 return;
             }
@@ -355,14 +465,15 @@
     }
 
     function renderCurrent() {
-        if (currentMode === null)          renderTop();
-        else if (currentMode === 'manual') renderManual();
-        else if (currentMode === 'other')  renderOther();
-        else if (currentCat === '')        renderCatsFor(currentMode);
-        else                               renderItemsFor(currentMode, currentCat);
+        if (currentMode === 'manual')     renderManual();
+        else if (currentMode === 'other') renderOther();
+        else if (currentCat === '')       renderCatsFor(currentMode);
+        else {
+            const idx = (window._cats || []).indexOf(currentCat);
+            if (idx >= 0) renderItemsFor(currentMode, idx);
+            else          renderCatsFor(currentMode);
+        }
     }
-
-
 
     // ─── Parsers ─────────────────────────────────────────────
 
@@ -429,95 +540,97 @@
         return rows;
     }
 
-    // ─── Header ─────────────────────────────────────────────
+    // ─── Header / Nav ───────────────────────────────────────
 
     function setHeader(title, backFn) {
         const backBtn = document.getElementById('back-btn');
-        const titleEl = document.getElementById('header-title-text');
-        titleEl.textContent = title;
+        document.getElementById('header-title-text').textContent = title;
         if (backFn) {
-            backBtn.classList.add('visible');
+            backBtn.classList.remove('hidden');
             backBtn.onclick = backFn;
         } else {
-            backBtn.classList.remove('visible');
+            backBtn.classList.add('hidden');
+            backBtn.onclick = null;
         }
     }
 
-    // ─── Top screen ─────────────────────────────────────────
-
-    function renderTop() {
-        currentMode = null;
-        currentCat  = '';
-        setHeader('メニュー案内', null);
-        document.getElementById('item-list').innerHTML = `
-            <div class="mode-select">
-                <div class="mode-grid">
-                    <button class="mode-btn" onclick="renderCatsFor('food')">フード</button>
-                    <button class="mode-btn" onclick="renderCatsFor('drink')">ドリンク</button>
-                </div>
-                <button class="mode-btn" onclick="renderManual()">接客マニュアル動画・テーブルセット</button>
-                <button class="mode-btn" onclick="renderOther()">メニューにはないやつ</button>
-            </div>
-        `;
+    function setNav(mode) {
+        document.querySelectorAll('.nav-item').forEach(el =>
+            el.classList.toggle('active', el.dataset.mode === mode));
+        try { localStorage.setItem('menuLastTab', mode); } catch (e) {}
     }
 
-    // ─── 接客マニュアル動画（フラットリスト）───────────────
+    function goTab(mode) {
+        currentCat = '';
+        if (mode === 'manual')     renderManual();
+        else if (mode === 'other') renderOther();
+        else                       renderCatsFor(mode);
+    }
+
+    function setContent(html) {
+        const listEl = document.getElementById('item-list');
+        listEl.innerHTML = html;
+        listEl.scrollTop = 0;
+        document.getElementById('top-bar').classList.remove('scrolled');
+    }
+
+    document.getElementById('item-list').addEventListener('scroll', e => {
+        document.getElementById('top-bar').classList.toggle('scrolled', e.target.scrollTop > 4);
+    }, { passive: true });
+
+    function toggleCard(el) {
+        const card = el.closest('.card');
+        if (card && card.querySelector('.card-body')) card.classList.toggle('open');
+    }
+
+    // ─── 接客マニュアル動画・テーブルセット ─────────────────
 
     function renderManual() {
         currentMode = 'manual';
         currentCat  = '';
-        setHeader('接客マニュアル動画・テーブルセット', renderTop);
+        setNav('manual');
+        setHeader('接客マニュアル・テーブルセット', null);
 
         if (manualData.length === 0) {
-            document.getElementById('item-list').innerHTML = `<div class="status-msg">データがありません</div>`;
+            setContent(`<div class="status-msg">データがありません</div>`);
             return;
         }
 
-        const listEl = document.getElementById('item-list');
-        listEl.innerHTML = manualData.map(item => {
+        setContent(`<div class="cards">` + manualData.map(item => {
             const media = renderMedia(item.url);
-            const hasDetails = !!(media || item.note);
-            const detailsHtml = hasDetails ? `
-                <div class="item-details">
-                    ${media ? `<div class="field">${media}</div>` : ''}
-                </div>` : '';
             return `
-                <div class="list-item" onclick="if(this.querySelector('.item-details'))this.classList.toggle('open')">
-                    <div class="item-header">
-                        <div class="item-name">${esc(item.title)}</div>
-                        ${hasDetails ? '<div class="arrow">&#8250;</div>' : ''}
+                <div class="card">
+                    <div class="card-head ${media ? 'state' : ''}" onclick="toggleCard(this)">
+                        <div class="card-name">${esc(item.title)}</div>
+                        ${media ? ICON.expand : ''}
                     </div>
-                    ${detailsHtml}
+                    ${media ? `<div class="card-body">${media}</div>` : ''}
                 </div>`;
-        }).join('');
-        listEl.scrollTop = 0;
+        }).join('') + `</div>`);
     }
 
-    // ─── メニューにはないやつ（フラットリスト）──────────────
+    // ─── メニューにはないやつ ───────────────────────────────
 
     function renderOther() {
         currentMode = 'other';
         currentCat  = '';
-        setHeader('メニューにはないやつ', renderTop);
+        setNav('other');
+        setHeader('メニューにはないやつ', null);
 
         if (otherData.length === 0) {
-            document.getElementById('item-list').innerHTML = `<div class="status-msg">データがありません</div>`;
+            setContent(`<div class="status-msg">データがありません</div>`);
             return;
         }
 
-        const listEl = document.getElementById('item-list');
-        listEl.innerHTML = otherData.map(item => `
-            <div class="list-item">
-                <div class="item-header">
-                    <div class="item-name">${esc(item.name)}</div>
-                    ${item.price ? `<div class="item-price">${esc(item.price)}</div>` : ''}
-                </div>
+        setContent(`<div class="list" style="margin-top:4px">` + otherData.map(item => `
+            <div class="list-row">
+                <div class="text"><div class="headline">${esc(item.name)}</div></div>
+                ${item.price ? `<div class="price">${esc(item.price)}</div>` : ''}
             </div>`
-        ).join('');
-        listEl.scrollTop = 0;
+        ).join('') + `</div>`);
     }
 
-    // ─── カテゴリ → アイテム（フード/ドリンク/テーブルセット）
+    // ─── カテゴリ → アイテム（フード/ドリンク）──────────────
 
     function getModeLabel(mode) {
         return { food: 'フード', drink: 'ドリンク' }[mode] || mode;
@@ -530,61 +643,63 @@
     function renderCatsFor(mode) {
         currentMode = mode;
         currentCat  = '';
-        setHeader(getModeLabel(mode), renderTop);
+        setNav(mode);
+        setHeader(getModeLabel(mode), null);
 
         const data = getDataFor(mode);
         const seen = new Set();
         const cats = data.map(r => r.cat).filter(c => c && !seen.has(c) && seen.add(c));
 
         if (cats.length === 0) {
-            document.getElementById('item-list').innerHTML = `<div class="status-msg">データがありません</div>`;
+            setContent(`<div class="status-msg">データがありません</div>`);
             return;
         }
 
         window._cats = cats;
 
-        document.getElementById('item-list').innerHTML = cats.map((cat, i) => `
-            <div class="list-item" onclick="renderItemsFor('${mode}',${i})">
-                <div class="item-header">
-                    <div class="item-name">${esc(cat)}</div>
-                    <div class="arrow">&#8250;</div>
-                </div>
-            </div>
-        `).join('');
-        document.getElementById('item-list').scrollTop = 0;
+        setContent(`<div class="list" style="margin-top:4px">` + cats.map((cat, i) => {
+            const count = data.filter(r => r.cat === cat).length;
+            return `
+                <button class="list-row state" onclick="renderItemsFor('${mode}',${i})">
+                    <div class="lead">${esc([...cat][0] || '')}</div>
+                    <div class="text"><div class="headline">${esc(cat)}</div></div>
+                    <div class="trail">${count}品</div>
+                    ${ICON.chevron}
+                </button>`;
+        }).join('') + `</div>`);
     }
 
     function renderItemsFor(mode, catIdx) {
         const cat = (window._cats || [])[catIdx];
         if (cat === undefined) return;
-        currentCat = cat;
+        currentMode = mode;
+        currentCat  = cat;
+        setNav(mode);
 
         const data  = getDataFor(mode);
         const items = data.filter(r => r.cat === cat);
 
         setHeader(cat, () => renderCatsFor(mode));
 
-        const listEl = document.getElementById('item-list');
-
-        listEl.innerHTML = items.map(item => {
+        setContent(`<div class="cards">` + items.map(item => {
             let fields = [];
 
             if (mode === 'food') {
                 fields = [
-                    { label: '枚数/グラム', val: item.amount,    cls: '' },
-                    { label: '脂の量',               val: item.fat,       cls: '' },
-                    { label: '材料/部位',        val: item.parts,     cls: '' },
-                    { label: '説明',                     val: item.desc,      cls: '' },
-                    { label: '接客時の説明', val: item.guide, cls: 'guide-text' },
-                    { label: '付けるもの',   val: item.condiment, cls: 'condiment-text' },
-                    { label: '注意点',               val: item.note,      cls: 'alert-text' },
-                    { label: 'アレルギー',   val: item.allergy,   cls: 'alert-text' },
+                    { label: '枚数/グラム',   val: item.amount,    cls: '' },
+                    { label: '脂の量',        val: item.fat,       cls: '' },
+                    { label: '材料/部位',     val: item.parts,     cls: '' },
+                    { label: '説明',          val: item.desc,      cls: '' },
+                    { label: '接客時の説明',  val: item.guide,     cls: 'guide' },
+                    { label: '付けるもの',    val: item.condiment, cls: 'condiment' },
+                    { label: '注意点',        val: item.note,      cls: 'alert' },
+                    { label: 'アレルギー',    val: item.allergy,   cls: 'alert' },
                 ];
             } else if (mode === 'drink') {
                 fields = [
-                    { label: 'グラスの種類', val: item.glass,  cls: '' },
-                    { label: '分量詳細',              val: item.amount, cls: 'guide-text' },
-                    { label: 'その他',                    val: item.note,   cls: 'alert-text' },
+                    { label: 'グラスの種類',  val: item.glass,  cls: '' },
+                    { label: '分量詳細',      val: item.amount, cls: 'guide' },
+                    { label: 'その他',        val: item.note,   cls: 'alert' },
                 ];
             }
 
@@ -592,28 +707,26 @@
             const media      = item.image ? renderMedia(item.image) : '';
             const hasDetails = visFields.length > 0 || !!media;
 
-            const detailsHtml = hasDetails ? `
-                <div class="item-details">
+            const bodyHtml = hasDetails ? `
+                <div class="card-body">
                     ${visFields.map(d => `
-                        <div class="field">
+                        <div class="field ${d.cls ? 'callout ' + d.cls : ''}">
                             <div class="field-label">${esc(d.label)}</div>
-                            <div class="field-value ${d.cls}">${esc(d.val).replace(/\n/g,'<br>')}</div>
+                            <div class="field-value">${esc(d.val).replace(/\n/g,'<br>')}</div>
                         </div>`).join('')}
                     ${media ? `<div class="field"><div class="field-label">画像</div>${media}</div>` : ''}
                 </div>` : '';
 
             return `
-                <div class="list-item" onclick="if(this.querySelector('.item-details'))this.classList.toggle('open')">
-                    <div class="item-header">
-                        <div class="item-name">${esc(item.name)}</div>
-                        ${item.price ? `<div class="item-price">${esc(item.price)}</div>` : ''}
-                        ${hasDetails ? '<div class="arrow">&#8250;</div>' : ''}
+                <div class="card">
+                    <div class="card-head ${hasDetails ? 'state' : ''}" onclick="toggleCard(this)">
+                        <div class="card-name">${esc(item.name)}</div>
+                        ${item.price ? `<div class="price-chip">${esc(item.price)}</div>` : ''}
+                        ${hasDetails ? ICON.expand : ''}
                     </div>
-                    ${detailsHtml}
+                    ${bodyHtml}
                 </div>`;
-        }).join('');
-
-        listEl.scrollTop = 0;
+        }).join('') + `</div>`);
     }
 
     // ─── Media ─────────────────────────────────────────────
@@ -627,13 +740,7 @@
         if (yt) {
             const id    = yt[1];
             const embed = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
-            return `
-                <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
-                    <div class="play-overlay">
-                        <div class="play-circle">&#9654;</div>
-                        <div class="play-label">YouTube &#8250; タップして再生</div>
-                    </div>
-                </div>`;
+            return videoThumb(embed, 'YouTube ・ タップして再生');
         }
 
         // Google Drive（動画・画像両対応）
@@ -641,13 +748,7 @@
         if (gd) {
             const id    = gd[1];
             const embed = `https://drive.google.com/file/d/${id}/preview`;
-            return `
-                <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
-                    <div class="play-overlay">
-                        <div class="play-circle">&#9654;</div>
-                        <div class="play-label">Drive &#8250; タップして再生</div>
-                    </div>
-                </div>`;
+            return videoThumb(embed, 'Drive ・ タップして再生');
         }
 
         // 直接動画ファイル (.mp4 など)
@@ -663,7 +764,17 @@
         }
 
         // その他リンク
-        return `<a href="${esc(u)}" target="_blank" rel="noopener" class="media-link">&#8599; リンクを開く</a>`;
+        return `<a href="${esc(u)}" target="_blank" rel="noopener" class="text-btn state" onclick="event.stopPropagation()">${ICON.open}リンクを開く</a>`;
+    }
+
+    function videoThumb(embed, label) {
+        return `
+            <div class="video-thumb" onclick="event.stopPropagation();loadVideo(this,'${embed}')">
+                <div class="play-overlay">
+                    <div class="play-fab">${ICON.play}</div>
+                    <div class="play-label">${label}</div>
+                </div>
+            </div>`;
     }
 
     function loadVideo(el, embedUrl) {
@@ -689,6 +800,7 @@
             .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
+    setNav(currentMode);
     load();
 </script>
 </body>
