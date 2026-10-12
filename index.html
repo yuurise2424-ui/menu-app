@@ -513,10 +513,10 @@
     }
 
     function parseOtherCSV(text) {
-        // A=メニュー, B=値段
+        // A=メニュー, B=値段, C=説明
         const rows = parseCSV(text);
         return rows.slice(1).map(r => ({
-            name: r[0]||'', price: r[1]||'',
+            name: r[0]||'', price: r[1]||'', desc: r[2]||'',
         })).filter(r => r.name);
     }
 
@@ -623,12 +623,24 @@
             return;
         }
 
-        setContent(`<div class="list" style="margin-top:4px">` + otherData.map(item => `
-            <div class="list-row">
-                <div class="text"><div class="headline">${esc(item.name)}</div></div>
-                ${item.price ? `<div class="price">${esc(item.price)}</div>` : ''}
-            </div>`
-        ).join('') + `</div>`);
+        setContent(`<div class="cards">` + otherData.map(item => {
+            const hasDetails = !!item.desc;
+            return `
+                <div class="card">
+                    <div class="card-head ${hasDetails ? 'state' : ''}" onclick="toggleCard(this)">
+                        <div class="card-name">${esc(item.name)}</div>
+                        ${item.price ? `<div class="price-chip">${esc(item.price)}</div>` : ''}
+                        ${hasDetails ? ICON.expand : ''}
+                    </div>
+                    ${hasDetails ? `
+                    <div class="card-body">
+                        <div class="field">
+                            <div class="field-label">説明</div>
+                            <div class="field-value">${esc(item.desc).replace(/\n/g,'<br>')}</div>
+                        </div>
+                    </div>` : ''}
+                </div>`;
+        }).join('') + `</div>`);
     }
 
     // ─── カテゴリ → アイテム（フード/ドリンク）──────────────
