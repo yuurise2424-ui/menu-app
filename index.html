@@ -462,7 +462,7 @@
     }
 
     function forceRefresh() {
-        load(true);
+        load(true).then(precacheVideos);
     }
 
     function renderCurrent() {
@@ -764,6 +764,13 @@
             return videoThumb(embed, 'Drive ・ タップして再生');
         }
 
+        // アプリ内の動画（videos/ フォルダ。端末に保存済みならオフラインでも再生）
+        const local = localVideoPath(u);
+        if (local) {
+            return `<video controls playsinline preload="metadata" class="item-video" onclick="event.stopPropagation()"
+                        src="${esc(encodeURI(local))}"></video>`;
+        }
+
         // 直接動画ファイル (.mp4 など)
         if (/\.(mp4|mov|webm|m4v)([?#]|$)/i.test(u)) {
             return `<video controls playsinline class="item-video" onclick="event.stopPropagation()">
@@ -805,6 +812,43 @@
         el.style.cursor = 'default';
     }
 
+    // ─── 動画の端末保存 ─────────────────────────────────────
+    // シートに「お出迎え.mp4」や「videos/お出迎え.mp4」と書くと videos/ の動画を使う。
+    // 起動時に裏でダウンロードして端末に保存し、以後は通信なしで再生する。
+
+    const VIDEO_CACHE = 'menu-videos';
+
+    function localVideoPath(u) {
+        if (!u || /^[a-z]+:/i.test(u) || !/\.(mp4|webm|m4v|mov)$/i.test(u)) return null;
+        const p = u.replace(/^\.?\//, '');
+        return p.includes('/') ? p : 'videos/' + p;
+    }
+
+    async function precacheVideos() {
+        if (!('caches' in window)) return;
+        const urls = [...new Set(
+            [...manualData, ...foodData, ...drinkData]
+                .map(i => localVideoPath(i.url || i.image))
+                .filter(Boolean)
+                .map(p => new URL(encodeURI(p), location.href).href)
+        )];
+        try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+        const cache = await caches.open(VIDEO_CACHE);
+        // シートから消えた動画は端末からも消す
+        for (const req of await cache.keys()) {
+            if (!urls.includes(req.url)) await cache.delete(req);
+        }
+        // 回線が遅くても詰まらないよう1本ずつ
+        for (const url of urls) {
+            if (await cache.match(url)) continue;
+            try {
+                const res = await fetch(url);
+                if (res.status === 200) await cache.put(url, res);
+            } catch (e) {}
+        }
+    }
+
     // ─── Utils ─────────────────────────────────────────────
 
     function esc(s) {
@@ -814,7 +858,7 @@
     }
 
     setNav(currentMode);
-    load();
+    load().then(precacheVideos);
 </script>
 </body>
 </html>
