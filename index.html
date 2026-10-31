@@ -308,7 +308,8 @@
             color: var(--md-on-secondary-container);
         }
         .nav-item.active .nav-label { font-weight: 700; }
-        .nav-label-long { font-size: 11px; letter-spacing: 0; white-space: nowrap; line-height: 14px; }
+        .nav-label-long { font-size: 11px; letter-spacing: 0; line-height: 14px; overflow-wrap: anywhere; }
+        .nav-indicator { max-width: 100%; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
@@ -334,46 +335,50 @@
         <div class="status-msg">データを準備しています...</div>
     </main>
 
-    <nav class="nav-bar" id="nav-bar">
-        <button class="nav-item" data-mode="drink" onclick="goTab('drink')">
-            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7L5.66 5h12.69l-1.78 2H7.43z"/></svg></span>
-            <span class="nav-label">ドリンク</span>
-        </button>
-        <button class="nav-item" data-mode="food" onclick="goTab('food')">
-            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg></span>
-            <span class="nav-label">フード</span>
-        </button>
-        <button class="nav-item" data-mode="other" onclick="goTab('other')">
-            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg></span>
-            <span class="nav-label nav-label-long">ハンディーに<br>無いもの・値段</span>
-        </button>
-        <button class="nav-item" data-mode="manual" onclick="goTab('manual')">
-            <span class="nav-indicator"><svg class="icon" viewBox="0 0 24 24"><path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg></span>
-            <span class="nav-label">マニュアル</span>
-        </button>
-    </nav>
+    <nav class="nav-bar" id="nav-bar"></nav>
 </div>
 
 <script>
-    const SHEET_ID   = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
-    const BASE       = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`;
-    const FOOD_URL   = BASE + 'フード';
-    const DRINK_URL  = BASE + 'ドリンク';
-    const MANUAL_URL = BASE + '接客マニュアル動画、テーブルセット';
-    const OTHER_URL  = BASE + 'ハンディーに無いもの・値段';
+    // ─── シートの場所 ───────────────────────────────────────
+    // 別の店のシートを使うときは、URL の後ろに ?sheet=シートID を付けて一度開く（端末に記憶される）
+    const DEFAULT_SHEET_ID = '1yroIO2G1QG_F7J3plZYO_gdy3Y898wk6pUS3Y7lT7oU';
+    const SHEET_ID = (() => {
+        try {
+            const q = new URLSearchParams(location.search).get('sheet');
+            if (q) localStorage.setItem('menuSheetId', q);
+            return localStorage.getItem('menuSheetId') || DEFAULT_SHEET_ID;
+        } catch (e) { return DEFAULT_SHEET_ID; }
+    })();
+    const STORE = 'menu:' + SHEET_ID + ':';
+    const SETTINGS_SHEET = '設定';
 
-    let foodData   = [];
-    let drinkData  = [];
-    let manualData = [];
-    let otherData  = [];
+    function sheetUrl(name) {
+        return `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1`
+             + `&sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+    }
 
-    let currentMode = 'food';
-    let currentCat  = '';
+    // 「設定」シートが無いときに使うタブ
+    const DEFAULT_TABS = [
+        { sheet: 'ドリンク',                         label: 'ドリンク' },
+        { sheet: 'フード',                           label: 'フード' },
+        { sheet: 'ハンディーに無いもの・値段',         label: 'ハンディーに\n無いもの・値段' },
+        { sheet: '接客マニュアル動画、テーブルセット', label: 'マニュアル' },
+    ];
+
+    let tabs   = DEFAULT_TABS;
+    let tables = {};      // シート名 → CSV の行（1行目が見出し）
+    let currentTab = '';
+    let currentCat = '';
 
     try {
-        const savedTab = localStorage.getItem('menuLastTab');
-        if (['food','drink','manual','other'].includes(savedTab)) currentMode = savedTab;
+        // 旧バージョンが保存していたタブ名を引き継ぐ
+        const old = { food: 'フード', drink: 'ドリンク', manual: '接客マニュアル動画、テーブルセット', other: 'ハンディーに無いもの・値段' };
+        const saved = localStorage.getItem('menuLastTab') || '';
+        currentTab = old[saved] || saved;
     } catch (e) {}
+
+    function store(key, val) { try { localStorage.setItem(STORE + key, val); } catch (e) {} }
+    function restore(key)    { try { return localStorage.getItem(STORE + key); } catch (e) { return null; } }
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -386,44 +391,51 @@
         chevron: '<svg class="icon" viewBox="0 0 24 24" style="color:var(--md-on-surface-variant)"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>',
         play:    '<svg class="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
         open:    '<svg class="icon" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>',
+        drink:   '<svg class="icon" viewBox="0 0 24 24"><path d="M21 5V3H3v2l8 9v5H6v2h12v-2h-5v-5l8-9zM7.43 7L5.66 5h12.69l-1.78 2H7.43z"/></svg>',
+        food:    '<svg class="icon" viewBox="0 0 24 24"><path d="M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z"/></svg>',
+        list:    '<svg class="icon" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>',
+        video:   '<svg class="icon" viewBox="0 0 24 24"><path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>',
     };
+
+    function tabIcon(tab) {
+        const s = tab.label + tab.sheet;
+        if (/ドリンク|飲/.test(s))            return ICON.drink;
+        if (/動画|マニュアル|接客/.test(s))    return ICON.video;
+        if (/フード|料理|食/.test(s))          return ICON.food;
+        return ICON.list;
+    }
 
     // ─── Load ────────────────────────────────────────────────
 
     const CACHE_TTL = 10 * 60 * 1000; // 10分
 
-    const cacheMap = {
-        food:   'menuFoodData',
-        drink:  'menuDrinkData',
-        manual: 'menuManualData',
-        other:  'menuHandyData',
-    };
-
-    const sheets = [
-        { url: FOOD_URL,   key: cacheMap.food,   parse: parseFoodCSV,   set: d => foodData = d },
-        { url: DRINK_URL,  key: cacheMap.drink,  parse: parseDrinkCSV,  set: d => drinkData = d },
-        { url: MANUAL_URL, key: cacheMap.manual, parse: parseManualCSV, set: d => manualData = d },
-        { url: OTHER_URL,  key: cacheMap.other,  parse: parseOtherCSV,  set: d => otherData = d },
-    ];
+    function parseTabs(text) {
+        // 設定シート：A=シート名, B=タブの表示名
+        const rows = parseCSV(text || '');
+        if (!rows.length || (rows[0][0] || '').trim() !== 'シート名') return null;
+        const list = rows.slice(1).map(r => {
+            const sheet = (r[0] || '').trim();
+            return { sheet, label: (r[1] || '').trim() || sheet };
+        }).filter(t => t.sheet);
+        return list.length ? list : null;
+    }
 
     async function load(force = false) {
         const badgeEl    = document.getElementById('offline-badge');
         const refreshBtn = document.getElementById('refresh-btn');
 
         // キャッシュからすぐ表示
-        const cached = {};
-        for (const [k, key] of Object.entries(cacheMap)) cached[k] = localStorage.getItem(key);
-        const hasCached = Object.values(cached).some(v => v);
-
-        if (cached.food)   foodData   = parseFoodCSV(cached.food);
-        if (cached.drink)  drinkData  = parseDrinkCSV(cached.drink);
-        if (cached.manual) manualData = parseManualCSV(cached.manual);
-        if (cached.other)  otherData  = parseOtherCSV(cached.other);
-
+        tabs = parseTabs(restore('tabs')) || DEFAULT_TABS;
+        let hasCached = false;
+        for (const t of tabs) {
+            const c = restore('sheet:' + t.sheet);
+            if (c) { tables[t.sheet] = parseCSV(c); hasCached = true; }
+        }
+        renderNav();
         if (hasCached) renderCurrent();
 
         // キャッシュが新鮮なら通信しない（10分以内）
-        const lastFetch = parseInt(localStorage.getItem('menuLastFetch') || '0');
+        const lastFetch = parseInt(restore('lastFetch') || '0');
         if (!force && hasCached && Date.now() - lastFetch < CACHE_TTL) {
             badgeEl.classList.remove('visible');
             return;
@@ -433,15 +445,23 @@
         if (refreshBtn) refreshBtn.classList.add('spinning');
 
         let networkError = false;
-        await Promise.all(sheets.map(s =>
-            fetch(s.url + '&t=' + Date.now())
-                .then(r => { if (!r.ok) throw new Error(); return r.text(); })
-                .then(text => {
-                    localStorage.setItem(s.key, text);
-                    try { s.set(s.parse(text)); } catch (e) {}
-                })
-                .catch(() => { networkError = true; })
-        ));
+        const fetchText  = url => fetch(url).then(r => { if (!r.ok) throw new Error(); return r.text(); });
+        const fetchSheet = name => fetchText(sheetUrl(name))
+            .then(text => { store('sheet:' + name, text); tables[name] = parseCSV(text); })
+            .catch(() => { networkError = true; });
+
+        // 設定シートと、いま分かっているタブを同時に取りに行き、増えたタブはあとから取る
+        const started = new Set(tabs.map(t => t.sheet));
+        const first   = tabs.map(t => fetchSheet(t.sheet));
+        await fetchText(sheetUrl(SETTINGS_SHEET))
+            .then(text => {
+                const parsed = parseTabs(text);
+                tabs = parsed || DEFAULT_TABS;
+                store('tabs', parsed ? text : '');
+            })
+            .catch(() => { networkError = true; });
+        const more = tabs.filter(t => !started.has(t.sheet)).map(t => fetchSheet(t.sheet));
+        await Promise.all([...first, ...more]);
 
         if (refreshBtn) refreshBtn.classList.remove('spinning');
 
@@ -454,10 +474,11 @@
             }
             badgeEl.classList.add('visible');
         } else {
-            localStorage.setItem('menuLastFetch', Date.now().toString());
+            store('lastFetch', Date.now().toString());
             badgeEl.classList.remove('visible');
         }
 
+        renderNav();
         renderCurrent();
     }
 
@@ -465,59 +486,55 @@
         load(true).then(precacheVideos);
     }
 
-    function renderCurrent() {
-        if (currentMode === 'manual')     renderManual();
-        else if (currentMode === 'other') renderOther();
-        else if (currentCat === '')       renderCatsFor(currentMode);
-        else {
-            const idx = (window._cats || []).indexOf(currentCat);
-            if (idx >= 0) renderItemsFor(currentMode, idx);
-            else          renderCatsFor(currentMode);
-        }
+    // ─── 見出し行の読み取り ─────────────────────────────────
+    // 列の位置ではなく1行目の見出しの名前で読むので、列の追加・並べ替え・名前の変更がそのまま反映される。
+    //   カテゴリ／分類 … 一覧のグループ分け
+    //   値段／価格／料金／金額 … 右上の値段
+    //   それ以外で一番左の列 … カードの見出し（商品名など）
+    //   残りの列 … 見出しの名前をそのまま項目名にして表示。# で始まる見出しの列は表示しない
+    // 見出しの2行目以降（セル内改行）は店長向けのメモとして表示しない。
+
+    const RE_CAT   = /^(カテゴリ|カテゴリー|分類)$/;
+    const RE_PRICE = /値段|価格|料金|金額/;
+    const RE_MEDIA = /画像|動画|写真/;
+
+    function analyzeColumns(headers) {
+        const cols = headers.map((h, i) => ({
+            i, label: (h || '').trim().split('\n')[0].trim().replace(/[。．]$/, ''),
+        })).filter(c => c.label && !/^[#＃]/.test(c.label));
+
+        let cat     = cols.find(c => RE_CAT.test(c.label));
+        const price = cols.find(c => c !== cat && RE_PRICE.test(c.label));
+        const rest  = cols.filter(c => c !== cat && c !== price);
+        let title   = rest.find(c => !RE_MEDIA.test(c.label));
+        // 「カテゴリ」と動画だけのシートは、カテゴリ列をそのまま見出しにする
+        if (!title && cat) { title = cat; cat = null; }
+        if (!title) return null;
+
+        return { cat, title, price, fields: rest.filter(c => c !== title) };
     }
 
-    // ─── Parsers ─────────────────────────────────────────────
+    // 見出しの名前で強調の色を決める
+    function fieldStyle(label) {
+        if (/注意|アレルギー|その他/.test(label))     return 'alert';
+        if (/接客|トーク|声かけ|分量/.test(label))    return 'guide';
+        if (/付ける|つける|タレ|薬味/.test(label))     return 'condiment';
+        return '';
+    }
 
-    function parseFoodCSV(text) {
-        const rows = parseCSV(text);
+    function buildView(sheet) {
+        const rows = tables[sheet];
+        if (!rows || !rows.length) return null;
+        const a = analyzeColumns(rows[0]);
+        if (!a) return { missing: true };
+
         let lastCat = '';
-        return rows.slice(1).map(r => {
-            if (r[0]) lastCat = r[0];
-            return {
-                cat: lastCat, name: r[1]||'', price: r[2]||'',
-                amount: r[3]||'', fat: r[4]||'', parts: r[5]||'',
-                desc: r[6]||'', guide: r[7]||'', condiment: r[8]||'',
-                note: r[9]||'', allergy: r[10]||'', image: r[11]||'',
-            };
-        }).filter(r => r.name);
-    }
-
-    function parseDrinkCSV(text) {
-        const rows = parseCSV(text);
-        let lastCat = '';
-        return rows.slice(1).map(r => {
-            if (r[0]) lastCat = r[0];
-            return {
-                cat: lastCat, name: r[1]||'',
-                glass: r[2]||'', amount: r[3]||'', note: r[4]||'', image: r[5]||'',
-            };
-        }).filter(r => r.name);
-    }
-
-    function parseManualCSV(text) {
-        // A=カテゴリ(項目名), B=動画・画像URL
-        const rows = parseCSV(text);
-        return rows.slice(1).map(r => ({
-            title: r[0]||'', url: r[1]||'',
-        })).filter(r => r.title);
-    }
-
-    function parseOtherCSV(text) {
-        // A=メニュー, B=値段, C=説明
-        const rows = parseCSV(text);
-        return rows.slice(1).map(r => ({
-            name: r[0]||'', price: r[1]||'', desc: r[2]||'',
-        })).filter(r => r.name);
+        const items = rows.slice(1).map(r => {
+            if (a.cat && r[a.cat.i]) lastCat = r[a.cat.i];
+            return { cat: lastCat, row: r };
+        }).filter(it => (it.row[a.title.i] || '').trim());
+        const cats = a.cat ? [...new Set(items.map(it => it.cat).filter(Boolean))] : [];
+        return { a, items, cats };
     }
 
     function parseCSV(text) {
@@ -555,17 +572,28 @@
         }
     }
 
-    function setNav(mode) {
-        document.querySelectorAll('.nav-item').forEach(el =>
-            el.classList.toggle('active', el.dataset.mode === mode));
-        try { localStorage.setItem('menuLastTab', mode); } catch (e) {}
+    function renderNav() {
+        document.getElementById('nav-bar').innerHTML = tabs.map((t, i) => {
+            const long = t.label.replace(/\n/g, '').length > 5;
+            return `
+                <button class="nav-item" data-idx="${i}" onclick="goTab(${i})">
+                    <span class="nav-indicator">${tabIcon(t)}</span>
+                    <span class="nav-label ${long ? 'nav-label-long' : ''}">${esc(t.label).replace(/\n/g, '<br>')}</span>
+                </button>`;
+        }).join('');
+        setNav();
     }
 
-    function goTab(mode) {
+    function setNav() {
+        document.querySelectorAll('.nav-item').forEach(el =>
+            el.classList.toggle('active', (tabs[el.dataset.idx] || {}).sheet === currentTab));
+        try { localStorage.setItem('menuLastTab', currentTab); } catch (e) {}
+    }
+
+    function goTab(i) {
+        currentTab = tabs[i].sheet;
         currentCat = '';
-        if (mode === 'manual')     renderManual();
-        else if (mode === 'other') renderOther();
-        else                       renderCatsFor(mode);
+        renderTab();
     }
 
     function setContent(html) {
@@ -584,96 +612,41 @@
         if (card && card.querySelector('.card-body')) card.classList.toggle('open');
     }
 
-    // ─── 接客マニュアル動画・テーブルセット ─────────────────
+    // ─── タブ → （カテゴリ →）カード ─────────────────────────
 
-    function renderManual() {
-        currentMode = 'manual';
-        currentCat  = '';
-        setNav('manual');
-        setHeader('接客マニュアル・テーブルセット', null);
+    function renderCurrent() {
+        if (!tabs.some(t => t.sheet === currentTab)) currentTab = (tabs[0] || {}).sheet || '';
+        const view = buildView(currentTab);
+        if (currentCat && view && view.cats && view.cats.includes(currentCat)) renderItems(currentCat);
+        else renderTab();
+    }
 
-        if (manualData.length === 0) {
+    function renderTab() {
+        currentCat = '';
+        const tab = tabs.find(t => t.sheet === currentTab) || { sheet: currentTab, label: currentTab };
+        setNav();
+        setHeader(tab.label.replace(/\n/g, ''), null);
+
+        const view = buildView(currentTab);
+        if (view && view.missing) {
+            setContent(`<div class="status-msg">シート「${esc(currentTab)}」が見つからないか、1行目に見出しがありません。<br>「設定」シートのシート名を確認してください。</div>`);
+            return;
+        }
+        if (!view || view.items.length === 0) {
             setContent(`<div class="status-msg">データがありません</div>`);
             return;
         }
 
-        setContent(`<div class="cards">` + manualData.map(item => {
-            const media = renderMedia(item.url);
-            return `
-                <div class="card">
-                    <div class="card-head ${media ? 'state' : ''}" onclick="toggleCard(this)">
-                        <div class="card-name">${esc(item.title)}</div>
-                        ${media ? ICON.expand : ''}
-                    </div>
-                    ${media ? `<div class="card-body">${media}</div>` : ''}
-                </div>`;
-        }).join('') + `</div>`);
-    }
-
-    // ─── ハンディーに無いもの・値段 ───────────────────────────────
-
-    function renderOther() {
-        currentMode = 'other';
-        currentCat  = '';
-        setNav('other');
-        setHeader('ハンディーに無いもの・値段', null);
-
-        if (otherData.length === 0) {
-            setContent(`<div class="status-msg">データがありません</div>`);
+        if (!view.cats.length) {
+            setContent(cardsHtml(view.items, view.a));
             return;
         }
 
-        setContent(`<div class="cards">` + otherData.map(item => {
-            const hasDetails = !!item.desc;
+        window._cats = view.cats;
+        setContent(`<div class="list" style="margin-top:4px">` + view.cats.map((cat, i) => {
+            const count = view.items.filter(it => it.cat === cat).length;
             return `
-                <div class="card">
-                    <div class="card-head ${hasDetails ? 'state' : ''}" onclick="toggleCard(this)">
-                        <div class="card-name">${esc(item.name)}</div>
-                        ${item.price ? `<div class="price-chip">${esc(item.price)}</div>` : ''}
-                        ${hasDetails ? ICON.expand : ''}
-                    </div>
-                    ${hasDetails ? `
-                    <div class="card-body">
-                        <div class="field">
-                            <div class="field-label">説明</div>
-                            <div class="field-value">${esc(item.desc).replace(/\n/g,'<br>')}</div>
-                        </div>
-                    </div>` : ''}
-                </div>`;
-        }).join('') + `</div>`);
-    }
-
-    // ─── カテゴリ → アイテム（フード/ドリンク）──────────────
-
-    function getModeLabel(mode) {
-        return { food: 'フード', drink: 'ドリンク' }[mode] || mode;
-    }
-
-    function getDataFor(mode) {
-        return { food: foodData, drink: drinkData }[mode] || [];
-    }
-
-    function renderCatsFor(mode) {
-        currentMode = mode;
-        currentCat  = '';
-        setNav(mode);
-        setHeader(getModeLabel(mode), null);
-
-        const data = getDataFor(mode);
-        const seen = new Set();
-        const cats = data.map(r => r.cat).filter(c => c && !seen.has(c) && seen.add(c));
-
-        if (cats.length === 0) {
-            setContent(`<div class="status-msg">データがありません</div>`);
-            return;
-        }
-
-        window._cats = cats;
-
-        setContent(`<div class="list" style="margin-top:4px">` + cats.map((cat, i) => {
-            const count = data.filter(r => r.cat === cat).length;
-            return `
-                <button class="list-row state" onclick="renderItemsFor('${mode}',${i})">
+                <button class="list-row state" onclick="renderItems(window._cats[${i}])">
                     <div class="lead">${esc([...cat][0] || '')}</div>
                     <div class="text"><div class="headline">${esc(cat)}</div></div>
                     <div class="trail">${count}品</div>
@@ -682,64 +655,50 @@
         }).join('') + `</div>`);
     }
 
-    function renderItemsFor(mode, catIdx) {
-        const cat = (window._cats || [])[catIdx];
-        if (cat === undefined) return;
-        currentMode = mode;
-        currentCat  = cat;
-        setNav(mode);
+    function renderItems(cat) {
+        const view = buildView(currentTab);
+        if (!view || !view.cats) return;
+        currentCat = cat;
+        setNav();
+        setHeader(cat, renderTab);
+        setContent(cardsHtml(view.items.filter(it => it.cat === cat), view.a));
+    }
 
-        const data  = getDataFor(mode);
-        const items = data.filter(r => r.cat === cat);
-
-        setHeader(cat, () => renderCatsFor(mode));
-
-        setContent(`<div class="cards">` + items.map(item => {
-            let fields = [];
-
-            if (mode === 'food') {
-                fields = [
-                    { label: '枚数/グラム',   val: item.amount,    cls: '' },
-                    { label: '脂の量',        val: item.fat,       cls: '' },
-                    { label: '材料/部位',     val: item.parts,     cls: '' },
-                    { label: '説明',          val: item.desc,      cls: '' },
-                    { label: '接客時の説明',  val: item.guide,     cls: 'guide' },
-                    { label: '付けるもの',    val: item.condiment, cls: 'condiment' },
-                    { label: '注意点',        val: item.note,      cls: 'alert' },
-                    { label: 'アレルギー',    val: item.allergy,   cls: 'alert' },
-                ];
-            } else if (mode === 'drink') {
-                fields = [
-                    { label: 'グラスの種類',  val: item.glass,  cls: '' },
-                    { label: '分量詳細',      val: item.amount, cls: 'guide' },
-                    { label: 'その他',        val: item.note,   cls: 'alert' },
-                ];
-            }
-
-            const visFields  = fields.filter(d => d.val);
-            const media      = item.image ? renderMedia(item.image) : '';
-            const hasDetails = visFields.length > 0 || !!media;
-
-            const bodyHtml = hasDetails ? `
-                <div class="card-body">
-                    ${visFields.map(d => `
-                        <div class="field ${d.cls ? 'callout ' + d.cls : ''}">
-                            <div class="field-label">${esc(d.label)}</div>
-                            <div class="field-value">${esc(d.val).replace(/\n/g,'<br>')}</div>
-                        </div>`).join('')}
-                    ${media ? `<div class="field"><div class="field-label">画像</div>${media}</div>` : ''}
-                </div>` : '';
-
+    function cardsHtml(items, a) {
+        return `<div class="cards">` + items.map(({ row }) => {
+            const name   = row[a.title.i] || '';
+            const price  = a.price ? (row[a.price.i] || '') : '';
+            const fields = a.fields
+                .map(c => ({ label: c.label, val: (row[c.i] || '').trim() }))
+                .filter(f => f.val);
+            const body = fields.map(f => fieldHtml(f, fields.length === 1)).join('');
             return `
                 <div class="card">
-                    <div class="card-head ${hasDetails ? 'state' : ''}" onclick="toggleCard(this)">
-                        <div class="card-name">${esc(item.name)}</div>
-                        ${item.price ? `<div class="price-chip">${esc(item.price)}</div>` : ''}
-                        ${hasDetails ? ICON.expand : ''}
+                    <div class="card-head ${body ? 'state' : ''}" onclick="toggleCard(this)">
+                        <div class="card-name">${esc(name)}</div>
+                        ${price ? `<div class="price-chip">${esc(price)}</div>` : ''}
+                        ${body ? ICON.expand : ''}
                     </div>
-                    ${bodyHtml}
+                    ${body ? `<div class="card-body">${body}</div>` : ''}
                 </div>`;
-        }).join('') + `</div>`);
+        }).join('') + `</div>`;
+    }
+
+    function fieldHtml(f, only) {
+        if (isMediaValue(f.val)) {
+            const media = renderMedia(f.val);
+            return only ? media : `<div class="field"><div class="field-label">${esc(f.label)}</div>${media}</div>`;
+        }
+        const cls = fieldStyle(f.label);
+        return `
+            <div class="field ${cls ? 'callout ' + cls : ''}">
+                <div class="field-label">${esc(f.label)}</div>
+                <div class="field-value">${esc(f.val).replace(/\n/g, '<br>')}</div>
+            </div>`;
+    }
+
+    function isMediaValue(v) {
+        return /^https?:\/\//i.test(v) || !!localVideoPath(v) || /\.(jpe?g|png|gif|webp|avif|bmp|svg)$/i.test(v);
     }
 
     // ─── Media ─────────────────────────────────────────────
@@ -827,8 +786,9 @@
     async function precacheVideos() {
         if (!('caches' in window)) return;
         const urls = [...new Set(
-            [...manualData, ...foodData, ...drinkData]
-                .map(i => localVideoPath(i.url || i.image))
+            Object.values(tables)
+                .flatMap(rows => rows.slice(1).flat())
+                .map(localVideoPath)
                 .filter(Boolean)
                 .map(p => new URL(encodeURI(p), location.href).href)
         )];
@@ -857,7 +817,6 @@
             .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     }
 
-    setNav(currentMode);
     load().then(precacheVideos);
 </script>
 </body>
