@@ -598,6 +598,7 @@
 
     function setContent(html) {
         const listEl = document.getElementById('item-list');
+        releaseVideos();
         listEl.innerHTML = html;
         listEl.scrollTop = 0;
         document.getElementById('top-bar').classList.remove('scrolled');
@@ -609,7 +610,7 @@
 
     function toggleCard(el) {
         const card = el.closest('.card');
-        if (card && card.querySelector('.card-body')) card.classList.toggle('open');
+        if (card && card.querySelector('.card-body') && card.classList.toggle('open')) useSavedVideos(card);
     }
 
     // ─── タブ → （カテゴリ →）カード ─────────────────────────
@@ -727,7 +728,7 @@
         const local = localVideoPath(u);
         if (local) {
             return `<video controls playsinline preload="metadata" class="item-video" onclick="event.stopPropagation()"
-                        src="${esc(encodeURI(local))}"></video>`;
+                        data-local="${esc(encodeURI(local))}" src="${esc(encodeURI(local))}"></video>`;
         }
 
         // 直接動画ファイル (.mp4 など)
@@ -781,6 +782,29 @@
         if (!u || /^[a-z]+:/i.test(u) || !/\.(mp4|webm|m4v|mov)$/i.test(u)) return null;
         const p = u.replace(/^\.?\//, '');
         return p.includes('/') ? p : 'videos/' + p;
+    }
+
+    // 保存済みの動画は、カードを開いたときに端末の中のデータ（blob）を読み込んで再生する。
+    // 途中から再生しても通信しない。まだ保存できていない動画は、そのまま通信で再生する。
+    let videoBlobUrls = [];
+    function releaseVideos() {
+        videoBlobUrls.forEach(u => URL.revokeObjectURL(u));
+        videoBlobUrls = [];
+    }
+
+    async function useSavedVideos(root) {
+        if (!('caches' in window)) return;
+        const cache = await caches.open(VIDEO_CACHE);
+        for (const v of root.querySelectorAll('video[data-local]')) {
+            if (v.src.startsWith('blob:')) continue;
+            const res = await cache.match(new URL(v.dataset.local, location.href).href);
+            if (!res) continue;
+            const blob = await res.blob();
+            if (!v.isConnected || !v.paused || v.currentTime > 0) continue;
+            const url = URL.createObjectURL(blob);
+            videoBlobUrls.push(url);
+            v.src = url;
+        }
     }
 
     async function precacheVideos() {
