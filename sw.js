@@ -1,4 +1,4 @@
-const CACHE_NAME = 'menu-v8';
+const CACHE_NAME = 'menu-v9';
 const VIDEO_CACHE = 'menu-videos'; // index.html の precacheVideos が中身を管理する（ここでは消さないだけ）
 const PRECACHE = ['./index.html', './manifest.json', './quiz_bank.js'];
 
