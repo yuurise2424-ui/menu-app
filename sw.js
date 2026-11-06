@@ -1,6 +1,6 @@
-const CACHE_NAME = 'menu-v7';
+const CACHE_NAME = 'menu-v8';
 const VIDEO_CACHE = 'menu-videos'; // index.html の precacheVideos が中身を管理する（ここでは消さないだけ）
-const PRECACHE = ['./index.html', './manifest.json'];
+const PRECACHE = ['./index.html', './manifest.json', './quiz_bank.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE)));

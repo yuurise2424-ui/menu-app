@@ -311,6 +311,52 @@
         .nav-label-long { font-size: 11px; letter-spacing: 0; line-height: 14px; overflow-wrap: anywhere; }
         .nav-indicator { max-width: 100%; }
 
+        /* ─── クイズ ─── */
+        #quiz-btn.active { color: var(--md-primary); }
+        .quiz-lead { font-size: 14px; line-height: 22px; color: var(--md-on-surface-variant); padding: 8px 4px 4px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0; }
+        .chip {
+            height: 40px; padding: 0 16px; border-radius: var(--md-shape-s);
+            border: 1px solid var(--md-outline); background: none;
+            font-size: 14px; font-weight: 500; color: var(--md-on-surface);
+        }
+        .chip.selected { background: var(--md-secondary-container); border-color: transparent; color: var(--md-on-secondary-container); }
+        .name-form { display: flex; gap: 8px; padding: 8px 0; }
+        .text-input {
+            flex: 1; min-width: 0; height: 48px; padding: 0 16px;
+            border-radius: var(--md-shape-s); border: 1px solid var(--md-outline);
+            background: var(--md-surface-container-low); color: var(--md-on-surface);
+            font: inherit; font-size: 16px;
+        }
+        .name-form .filled-btn, .row-btns .filled-btn { margin-top: 0; }
+        .bar { height: 8px; border-radius: 4px; background: var(--md-surface-container-highest); overflow: hidden; margin-top: 6px; }
+        .bar > span { display: block; height: 100%; background: var(--md-primary); border-radius: 4px; }
+        .quiz-progress { font-size: 12px; font-weight: 500; letter-spacing: 0.04em; color: var(--md-on-surface-variant); padding: 8px 4px 0; }
+        .quiz-question { font-size: 20px; line-height: 30px; font-weight: 500; padding: 12px 4px 16px; }
+        .quiz-question small { display: block; font-size: 13px; line-height: 20px; font-weight: 400; color: var(--md-on-surface-variant); }
+        .choices { display: flex; flex-direction: column; gap: 8px; }
+        .choice {
+            min-height: 56px; padding: 12px 16px; text-align: left;
+            border-radius: var(--md-shape-m); border: 1px solid var(--md-outline-variant);
+            background: var(--md-surface-container-low); font-size: 16px; line-height: 24px;
+        }
+        .choice.correct { background: var(--md-tertiary-container); color: var(--md-on-tertiary-container); border-color: transparent; }
+        .choice.wrong   { background: var(--md-error-container);    color: var(--md-on-error-container);    border-color: transparent; }
+        .choice.picked { background: var(--md-secondary-container); color: var(--md-on-secondary-container); border-color: transparent; }
+        .choice:disabled { cursor: default; }
+        .verdict { font-size: 18px; font-weight: 700; padding: 16px 4px 8px; }
+        .verdict.ok { color: var(--md-tertiary); }
+        .verdict.ng { color: var(--md-error); }
+        .row-btns { display: flex; gap: 8px; justify-content: flex-end; padding: 16px 0 8px; flex-wrap: wrap; }
+        .score { font-size: 48px; font-weight: 700; text-align: center; padding: 24px 0 4px; color: var(--md-primary); }
+        .person-card { background: var(--md-surface-container-low); border-radius: var(--md-shape-m); padding: 16px; }
+        .person-head { display: flex; align-items: baseline; gap: 8px; }
+        .person-name { flex: 1; font-size: 16px; font-weight: 700; }
+        .person-meta { font-size: 12px; color: var(--md-on-surface-variant); }
+        .person-row { margin-top: 12px; font-size: 14px; }
+        .person-row .pct { float: right; color: var(--md-on-surface-variant); }
+        .weak { margin-top: 12px; font-size: 13px; line-height: 20px; color: var(--md-on-surface-variant); }
+
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
     </style>
@@ -326,6 +372,9 @@
             <span id="header-title-text">読み込み中...</span>
             <span id="offline-badge" class="offline-chip">オフライン</span>
         </div>
+        <button class="icon-btn state" id="quiz-btn" onclick="openQuiz()" aria-label="クイズ">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg>
+        </button>
         <button class="icon-btn state" id="refresh-btn" onclick="forceRefresh()" aria-label="更新">
             <svg class="icon" viewBox="0 0 24 24"><path d="M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
         </button>
@@ -338,6 +387,7 @@
     <nav class="nav-bar" id="nav-bar"></nav>
 </div>
 
+<script src="quiz_bank.js"></script>
 <script>
     // ─── シートの場所 ───────────────────────────────────────
     // 別の店のシートを使うときは、URL の後ろに ?sheet=シートID を付けて一度開く（端末に記憶される）
@@ -365,10 +415,11 @@
         { sheet: '接客マニュアル動画、テーブルセット', label: 'マニュアル' },
     ];
 
-    let tabs   = DEFAULT_TABS;
-    let tables = {};      // シート名 → CSV の行（1行目が見出し）
+    let tabs   = [];
+    let tables = {};      // シート名 → 行の配列（1行目が見出し）。シートが無いときは null
     let currentTab = '';
     let currentCat = '';
+    let inQuiz     = false;
 
     try {
         // 旧バージョンが保存していたタブ名を引き継ぐ
@@ -423,7 +474,6 @@
     async function load(force = false) {
         const badgeEl    = document.getElementById('offline-badge');
         const refreshBtn = document.getElementById('refresh-btn');
-
         // キャッシュからすぐ表示
         tabs = parseTabs(restore('tabs')) || DEFAULT_TABS;
         let hasCached = false;
@@ -450,7 +500,6 @@
             .then(text => { store('sheet:' + name, text); tables[name] = parseCSV(text); })
             .catch(() => { networkError = true; });
 
-        // 設定シートと、いま分かっているタブを同時に取りに行き、増えたタブはあとから取る
         const started = new Set(tabs.map(t => t.sheet));
         const first   = tabs.map(t => fetchSheet(t.sheet));
         await fetchText(sheetUrl(SETTINGS_SHEET))
@@ -462,7 +511,6 @@
             .catch(() => { networkError = true; });
         const more = tabs.filter(t => !started.has(t.sheet)).map(t => fetchSheet(t.sheet));
         await Promise.all([...first, ...more]);
-
         if (refreshBtn) refreshBtn.classList.remove('spinning');
 
         if (networkError) {
@@ -481,6 +529,7 @@
         renderNav();
         renderCurrent();
     }
+
 
     function forceRefresh() {
         load(true).then(precacheVideos);
@@ -586,7 +635,8 @@
 
     function setNav() {
         document.querySelectorAll('.nav-item').forEach(el =>
-            el.classList.toggle('active', (tabs[el.dataset.idx] || {}).sheet === currentTab));
+            el.classList.toggle('active', !inQuiz && (tabs[el.dataset.idx] || {}).sheet === currentTab));
+        document.getElementById('quiz-btn').classList.toggle('active', inQuiz);
         try { localStorage.setItem('menuLastTab', currentTab); } catch (e) {}
     }
 
@@ -616,6 +666,7 @@
     // ─── タブ → （カテゴリ →）カード ─────────────────────────
 
     function renderCurrent() {
+        if (inQuiz) return;   // クイズ中に裏の読み込みが終わっても画面を変えない
         if (!tabs.some(t => t.sheet === currentTab)) currentTab = (tabs[0] || {}).sheet || '';
         const view = buildView(currentTab);
         if (currentCat && view && view.cats && view.cats.includes(currentCat)) renderItems(currentCat);
@@ -623,6 +674,7 @@
     }
 
     function renderTab() {
+        inQuiz = false;
         currentCat = '';
         const tab = tabs.find(t => t.sheet === currentTab) || { sheet: currentTab, label: currentTab };
         setNav();
@@ -659,6 +711,7 @@
     function renderItems(cat) {
         const view = buildView(currentTab);
         if (!view || !view.cats) return;
+        inQuiz = false;
         currentCat = cat;
         setNav();
         setHeader(cat, renderTab);
@@ -700,6 +753,389 @@
 
     function isMediaValue(v) {
         return /^https?:\/\//i.test(v) || !!localVideoPath(v) || /\.(jpe?g|png|gif|webp|avif|bmp|svg)$/i.test(v);
+    }
+
+    // ─── クイズ ─────────────────────────────────────────────
+    // 分野は QUIZ_TOPICS に並べる。問題の作り方は3通り。
+    //   シートの列から自動で作る … 部位・説明・グラスなど。シートを直せば問題も変わる
+    //   quiz_bank.js の手作りの問題 … 注意点やドリンクの作り方など、列からは作れないもの
+    //   声に出す問題 … 何も見ずに言ってみて、答えを見て「言えた／言えなかった」を自分で押す
+    // 間違いの選択肢は同じカテゴリの中から優先して選ぶ（似たものの中で迷うように）。「？」付きの未確定の値は出さない。
+    // 結果は、この端末だけに残す。回答者の名前や結果を外部には送らない。
+
+    const QUIZ_LEN     = 5;
+    const QUIZ_LOG_MAX = 3000;
+    const DAY = 24 * 60 * 60 * 1000;
+    const NOT_MEAT = /宴|野菜|漬物|飯|汁|麺|菓子/;
+    // 書き方が違うだけで同じものなので、間違いの選択肢にしない
+    const QUIZ_SAME = [['腕の赤身', '赤身の強い腕肉', '腕の肉'], ['横隔膜', 'ハラミ'], ['第4胃袋', 'ギアラ'], ['肩ロース', 'ハネシタ']];
+    let quiz = null;
+    function readList(key) { try { return JSON.parse(restore(key) || '[]'); } catch (e) { return []; } }
+    function quizLog() { return readList('quizLog'); }
+
+    function quizNorm(s) {
+        return String(s).normalize('NFKC').replace(/[\s。]|税込/g, '')
+            .replace(/一/g, '1').replace(/二/g, '2').replace(/三/g, '3').replace(/四/g, '4');
+    }
+
+    function sameAnswer(a, b) {
+        const x = quizNorm(a), y = quizNorm(b);
+        return x.includes(y) || y.includes(x)
+            || QUIZ_SAME.some(g => g.some(v => x.includes(v)) && g.some(v => y.includes(v)));
+    }
+
+    // 見出しの名前が re に合う列を持つシートの、中身が入っている行
+    function quizRows(re, skipCat) {
+        const out = [];
+        tabs.forEach(t => {
+            const view = buildView(t.sheet);
+            if (!view || view.missing) return;
+            const a = view.a;
+            const col = [...(a.price ? [a.price] : []), ...a.fields].find(c => re.test(c.label));
+            if (!col) return;
+            view.items.forEach(it => {
+                const cell = (it.row[col.i] || '').trim();
+                if (!cell || (skipCat && skipCat.test(it.cat))) return;
+                const title = (it.row[a.title.i] || '').trim();
+                out.push({ it, a, cat: it.cat, cell, first: cell.split('\n')[0].trim(), name: /種類|いっぱい/.test(title) ? it.cat : title });
+            });
+        });
+        return out;
+    }
+
+    // 4択の問題を作る。val が答え、key が「同じ答えかどうか」を比べる値（省略すると答えそのもの）
+    function choiceQuestions(id, label, rows, val, text, key = val) {
+        const list = rows.filter(r => val(r) && !/[？?]/.test(key(r)));
+        return list.map(r => {
+            const others = list.filter(o => !sameAnswer(key(o), key(r)));
+            return {
+                key: `${id}|${r.name}|${label}`, item: r.name, label, text: text(r), cat: r.cat, answer: val(r),
+                near: others.filter(o => o.cat === r.cat).map(val), far: others.filter(o => o.cat !== r.cat).map(val),
+                it: r.it, a: r.a,
+            };
+        }).filter(q => wrongChoices(q).length === 3);
+    }
+
+    function wrongChoices(q) {
+        if (q.wrong) return q.wrong;
+        const w = [];
+        for (const v of [...shuffle(q.near), ...shuffle(q.far || [])]) {
+            if (!sameAnswer(v, q.answer) && !w.some(x => sameAnswer(x, v))) w.push(v);
+            if (w.length === 3) break;
+        }
+        return w;
+    }
+
+    function oralQuestions(id, label, rows, text) {
+        return rows.map(r => ({ type: 'oral', key: `${id}|${r.name}|${label}`, item: r.name, label, text: text(r), cat: r.cat, it: r.it, a: r.a }));
+    }
+
+    function bankQuestions(id) {
+        return QUIZ_BANK.filter(b => b.t === id).map(b => {
+            const hit = quizFindItem(b.item);
+            return {
+                key: `${id}|${b.item}|${b.label}`, item: b.item, label: b.label, text: b.q || `「${b.item}」の${b.label}は？`,
+                answer: b.a, wrong: b.w, note: b.note, it: hit && hit.it, a: hit && hit.a,
+            };
+        });
+    }
+
+    function quizFindItem(name) {
+        for (const t of tabs) {
+            const view = buildView(t.sheet);
+            if (!view || view.missing) continue;
+            const it = view.items.find(i => quizNorm(i.row[view.a.title.i] || '') === quizNorm(name));
+            if (it) return { it, a: view.a };
+        }
+        return null;
+    }
+
+    function courseNote() {
+        return QUIZ_COURSES.map(c => `${c.name}：${c.items.join('、')}`).join('\n');
+    }
+
+    function courseItemQuestions() {
+        const all = [...new Set(QUIZ_COURSES.flatMap(c => c.items))];
+        return all.map(item => ({
+            type: 'multi', key: `course-item|${item}|入っているコース`, item, label: '入っているコース',
+            text: `「${item}」が入っているコースを全部選んでください`,
+            options: QUIZ_COURSES.map(c => c.name),
+            answers: QUIZ_COURSES.filter(c => c.items.includes(item)).map(c => c.name),
+            note: courseNote(),
+        }));
+    }
+
+    function courseDiffQuestions() {
+        const qs = [];
+        const all = [...new Set(QUIZ_COURSES.flatMap(c => c.items))];
+        QUIZ_COURSES.forEach(c => {
+            all.filter(i => !c.items.includes(i)).forEach(out => qs.push({
+                key: `course-diff|${c.name}|${out}が無い`, item: c.name, label: `${out}が無い`,
+                text: `${c.name}に入っていないものは？`, answer: out, near: c.items, note: courseNote(),
+            }));
+            QUIZ_COURSES.filter(o => o !== c).forEach(o => {
+                c.items.filter(i => !o.items.includes(i)).forEach(item => qs.push({
+                    key: `course-diff|${c.name}と${o.name}|${item}`, item: `${c.name}と${o.name}の違い`, label: item,
+                    text: `${c.name}にあって、${o.name}に無いものは？`, answer: item, near: o.items, note: courseNote(),
+                }));
+            });
+        });
+        return qs;
+    }
+
+    function courseOralQuestions() {
+        return QUIZ_COURSES.map(c => ({
+            type: 'oral', key: `course-oral|${c.name}|内容`, item: c.name, label: '内容',
+            text: `${c.name}の中身を、全部言えますか？`, note: `${c.name}（${c.items.length}品）：${c.items.join('、')}`,
+        }));
+    }
+
+    const noCopy = r => {   // 説明の中に料理名が入っていると答えが見えるので使わない
+        const core = r.name.replace(/特選|和牛|名物|昇家|李昇|塩/g, '').trim();
+        return !r.first.includes(core);
+    };
+
+    const QUIZ_TOPICS = [
+        { id: 'course-item', group: 'コース', label: 'どのコースに入っている？', make: courseItemQuestions },
+        { id: 'course-diff', group: 'コース', label: 'コースの違い', make: courseDiffQuestions },
+        { id: 'course-rule', group: 'コース', label: 'コースの値段と決まり', make: () => bankQuestions('course-rule') },
+        { id: 'course-oral', group: 'コース', label: 'コースの中身を言う', oral: true, make: courseOralQuestions },
+
+        { id: 'part', group: '料理', label: '肉の部位', make: () => choiceQuestions('part', '部位',
+            quizRows(/部位/, NOT_MEAT).filter(r => r.first.length <= 14 && !r.name.includes(r.first)),
+            r => r.first, r => `「${r.name}」の部位は？`) },
+        { id: 'part-rev', group: '料理', label: '部位から料理を当てる', make: () => choiceQuestions('part-rev', '部位から',
+            quizRows(/部位/, NOT_MEAT).filter(r => r.first.length <= 14 && !r.name.includes(r.first)),
+            r => r.name, r => `部位が「${r.first}」の料理は？`, r => r.first) },
+        { id: 'explain', group: '料理', label: '説明から料理を当てる', make: () => choiceQuestions('explain', '説明から',
+            quizRows(/^商品説明/, /宴/).filter(r => r.first.length >= 8 && noCopy(r)),
+            r => r.name, r => `「${r.first}」\nこの料理は？`, r => r.name) },
+        { id: 'explain-oral', group: '料理', label: '料理の説明を言う', oral: true, make: () => oralQuestions('explain-oral', '説明',
+            quizRows(/^商品説明/, /宴|菓子/), r => `「${r.name}」を、お客様に説明してみましょう`) },
+        { id: 'howto', group: '料理', label: '食べ方の案内', make: () => choiceQuestions('howto', '食べ方の案内',
+            quizRows(/接客/), r => r.first, r => `「${r.name}」の食べ方の案内は？`) },
+        { id: 'bring', group: '料理', label: '一緒に持っていくもの', make: () => choiceQuestions('bring', '持っていくもの',
+            quizRows(/付ける|持って/), r => r.cell.replace(/\n/g, ' ＋ '), r => `「${r.name}」と一緒に持っていくものは？`) },
+        { id: 'count', group: '料理', label: '枚数', make: () => choiceQuestions('count', '枚数',
+            quizRows(/枚数/), r => r.first, r => `「${r.name}」は何枚？`) },
+        { id: 'price', group: '料理', label: '値段', make: () => choiceQuestions('price', '値段',
+            quizRows(/値段/, /宴/), r => r.first, r => `「${r.name}」の値段は？`) },
+        { id: 'caution', group: '料理', label: '注文の注意点', make: () => bankQuestions('caution') },
+
+        { id: 'glass', group: 'ドリンク', label: 'グラス', make: () => choiceQuestions('glass', 'グラス',
+            quizRows(/グラス/, /ボトルセット/), r => r.first, r => `「${r.name}」のグラスは？`) },
+        { id: 'glass-other', group: 'ドリンク', label: '氷なし・お湯割りのグラス', make: () => {
+            const rows = quizRows(/グラス/, /ボトルセット/);
+            const pick = (re, label) => rows.filter(r => re.test(r.cell)).map(r => ({
+                key: `glass-other|${r.name}|${label}`, item: r.name, label, text: `「${r.name}」の${label}のグラスは？`, cat: r.cat,
+                answer: r.cell.match(re)[1].trim(), near: ['9タン', 'サワーグラス', 'カクテルグラス', 'ビアタン'], it: r.it, a: r.a,
+            }));
+            return [...pick(/氷なしの場合(.+)/, '氷なし'), ...pick(/お湯割りの場合(.+)/, 'お湯割り')];
+        } },
+        { id: 'drink-make', group: 'ドリンク', label: 'ドリンクの作り方', make: () => bankQuestions('drink-make') },
+        { id: 'drink-oral', group: 'ドリンク', label: '作り方を言う', oral: true, make: () => oralQuestions('drink-oral', '作り方',
+            quizRows(/分量/).filter(r => r.cell.length >= 5), r => `「${r.name}」の作り方を言ってみましょう`) },
+        { id: 'drink-serve', group: 'ドリンク', label: 'ドリンクの提供', make: () => bankQuestions('drink-serve') },
+    ];
+
+    // この端末で答えた問題ごとの最後の答え
+    function lastResults(rows) {
+        const m = {};
+        rows.forEach(r => { m[r.key] = r; });
+        return m;
+    }
+
+    // 習得率：その分野の問題のうち、最後に答えたとき正解だった割合
+    function mastery(qs, last) {
+        if (!qs.length) return 0;
+        return Math.round(qs.filter(q => last[q.key] && last[q.key].ok).length / qs.length * 100);
+    }
+
+    function shuffle(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    // 間違えた問題 → まだ解いていない問題 → 3日以上前に正解した問題 → 最近正解した問題 の順に出す
+    function pickQuestions(qs) {
+        const last = lastResults(quizLog());
+        const now  = Date.now();
+        const rank = q => {
+            const r = last[q.key];
+            if (!r)    return 1;
+            if (!r.ok) return 0;
+            return now - r.t > 3 * DAY ? 2 : 3;
+        };
+        return qs.map(q => ({ q, s: rank(q) + Math.random() }))
+            .sort((x, y) => x.s - y.s)
+            .slice(0, QUIZ_LEN)
+            .map(x => x.q.type ? x.q : { ...x.q, choices: shuffle([x.q.answer, ...wrongChoices(x.q)]) });
+    }
+
+    function openQuiz() {
+        inQuiz = true;
+        setNav();
+        quizHome();
+    }
+
+    function closeQuiz() {
+        inQuiz = false;
+        renderCurrent();
+    }
+
+    function quizHome() {
+        const last = lastResults(quizLog());
+        const topics = QUIZ_TOPICS.map((t, i) => ({ t, i, qs: t.make() })).filter(x => x.qs.length);
+        setHeader('クイズ', closeQuiz);
+        if (!topics.length) {
+            setContent(`<div class="status-msg">クイズにできるデータがありません</div>`);
+            return;
+        }
+        setContent([...new Set(topics.map(x => x.t.group))].map(g => `
+            <div class="section-label">${esc(g)}</div>
+            <div class="list">` + topics.filter(x => x.t.group === g).map(x => {
+                const pct = mastery(x.qs, last);
+                return `
+                    <button class="list-row state" onclick="startQuiz(${x.i})">
+                        <div class="text">
+                            <div class="headline">${esc(x.t.label)}</div>
+                            <div class="supporting">${x.qs.length}問${x.t.oral ? '・声に出す' : ''}</div>
+                            <div class="bar"><span style="width:${pct}%"></span></div>
+                        </div>
+                        <div class="trail">${pct}%</div>
+                        ${ICON.chevron}
+                    </button>`;
+            }).join('') + `</div>`).join('') + `
+            <div class="quiz-lead">1回${QUIZ_LEN}問です。％は、その分野で覚えた問題の割合です。間違えた問題は、次のクイズでもう一度出ます。</div>`);
+    }
+
+    function startQuiz(i) {
+        const t = QUIZ_TOPICS[i];
+        quiz = { tabIdx: i, id: t.id, label: t.label, list: pickQuestions(t.make()), idx: 0, ok: 0, wrong: [] };
+        showQuestion();
+    }
+
+    function showQuestion() {
+        const q = quiz.list[quiz.idx];
+        setHeader(quiz.label, quizHome);
+        const body = q.type === 'oral'
+            ? `<div class="row-btns"><button class="filled-btn state" onclick="revealOral()">答えを見る</button></div>`
+            : q.type === 'multi'
+            ? `<div class="choices">${q.options.map(o =>
+                `<button class="choice state" onclick="this.classList.toggle('picked')">${esc(o)}</button>`).join('')}</div>
+               <div class="row-btns" id="multi-btn"><button class="filled-btn state" onclick="answerMulti()">答える</button></div>`
+            : `<div class="choices">${q.choices.map((c, k) =>
+                `<button class="choice state" onclick="answerQuiz(${k})">${esc(c)}</button>`).join('')}</div>`;
+        setContent(`
+            <div class="quiz-progress">${quiz.idx + 1} / ${quiz.list.length}</div>
+            <div class="bar"><span style="width:${quiz.idx / quiz.list.length * 100}%"></span></div>
+            <div class="quiz-question">
+                ${q.cat ? `<small>${esc(q.cat)}</small>` : ''}
+                ${esc(q.text).replace(/\n/g, '<br>')}
+            </div>
+            ${body}
+            <div id="quiz-after"></div>`);
+    }
+
+    // 解説：その商品のカードを開いた状態で見せる。カードが無いものは文章だけ
+    function explainHtml(q) {
+        const card = q.it ? cardsHtml([q.it], q.a).replace('class="card"', 'class="card open"') : '';
+        const note = q.note ? `<div class="quiz-lead">${esc(q.note).replace(/\n/g, '<br>')}</div>` : '';
+        return note + card;
+    }
+
+    function showAfter(head, buttons) {
+        const after = document.getElementById('quiz-after');
+        after.innerHTML = head + explainHtml(quiz.list[quiz.idx]) + `<div class="row-btns">${buttons}</div>`;
+        after.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function nextButton() {
+        return `<button class="filled-btn state" onclick="nextQuestion()">${quiz.idx === quiz.list.length - 1 ? '結果を見る' : '次へ'}</button>`;
+    }
+
+    function judged(q, ok) {
+        if (ok) quiz.ok++; else quiz.wrong.push(q);
+        recordAnswer(q, ok);
+    }
+
+    function answerQuiz(k) {
+        const q  = quiz.list[quiz.idx];
+        const ok = q.choices[k] === q.answer;
+        judged(q, ok);
+        document.querySelectorAll('.choice').forEach((el, j) => {
+            el.disabled = true;
+            if (q.choices[j] === q.answer) el.classList.add('correct');
+            else if (j === k)              el.classList.add('wrong');
+        });
+        showAfter(`<div class="verdict ${ok ? 'ok' : 'ng'}">${ok ? '正解！' : '不正解'}</div>`, nextButton());
+    }
+
+    function answerMulti() {
+        const q = quiz.list[quiz.idx];
+        const els = [...document.querySelectorAll('.choice')];
+        const ok = els.every((el, j) => el.classList.contains('picked') === q.answers.includes(q.options[j]));
+        judged(q, ok);
+        els.forEach((el, j) => {
+            el.disabled = true;
+            if (q.answers.includes(q.options[j]))        el.classList.add('correct');
+            else if (el.classList.contains('picked'))    el.classList.add('wrong');
+            el.classList.remove('picked');
+        });
+        document.getElementById('multi-btn').remove();
+        showAfter(`<div class="verdict ${ok ? 'ok' : 'ng'}">${ok ? '正解！' : '不正解'}</div>`, nextButton());
+    }
+
+    function revealOral() {
+        document.querySelector('#item-list .row-btns').remove();
+        showAfter(`<div class="verdict">答え</div>`, `
+            <button class="chip state" onclick="answerOral(false)">言えなかった</button>
+            <button class="filled-btn state" onclick="answerOral(true)">言えた</button>`);
+    }
+
+    function answerOral(ok) {
+        judged(quiz.list[quiz.idx], ok);
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        quiz.idx++;
+        if (quiz.idx < quiz.list.length) showQuestion();
+        else showQuizResult();
+    }
+
+    function showQuizResult() {
+        setHeader(quiz.label, quizHome);
+        setContent(`
+            <div class="score">${quiz.ok} / ${quiz.list.length}</div>
+            <div class="quiz-lead" style="text-align:center">
+                ${quiz.ok === quiz.list.length ? '全問正解！' : '間違えた問題は、次のクイズでもう一度出ます。'}
+            </div>
+            ${quiz.wrong.length ? `
+                <div class="section-label">もう一度確認する問題</div>
+                <div class="list">${quiz.wrong.map(q => `
+                    <div class="list-row">
+                        <div class="text">
+                            <div class="headline">${esc(q.text.split('\n')[0])}</div>
+                            ${q.type ? '' : `<div class="supporting">${esc(q.answer)}</div>`}
+                        </div>
+                    </div>`).join('')}
+                </div>` : ''}
+            <div class="row-btns">
+                <button class="chip state" onclick="quizHome()">分野を選ぶ</button>
+                <button class="filled-btn state" onclick="startQuiz(${quiz.tabIdx})">もう一度</button>
+            </div>`);
+    }
+
+    // ─── クイズの記録 ───────────────────────────────────────
+
+    function recordAnswer(q, ok) {
+        const r = { t: Date.now(), sheet: quiz.id, key: q.key, ok };
+        store('quizLog',   JSON.stringify([...quizLog(), r].slice(-QUIZ_LOG_MAX)));
     }
 
     // ─── Media ─────────────────────────────────────────────
@@ -811,6 +1247,7 @@
         if (!('caches' in window)) return;
         const urls = [...new Set(
             Object.values(tables)
+                .filter(Boolean)
                 .flatMap(rows => rows.slice(1).flat())
                 .map(localVideoPath)
                 .filter(Boolean)
